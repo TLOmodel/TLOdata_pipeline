@@ -8,19 +8,18 @@ import pandas as pd
 from tlo.analysis.utils import make_calendar_period_lookup
 from tlo.util import create_age_range_lookup
 
-from utils.utils import load_cfg
-
-try:
-    import yaml
-except ImportError as e:
-    raise SystemExit("Missing dependency: pyyaml. Install with: pip install pyyaml") from e
-
+from utils import load_cfg
 from demography_io import (
     ensure_dir,
     reformat_date_period_for_wpp,
     WPPReader,
     melt_year_age_groups,
 )
+
+try:
+    import yaml
+except ImportError as e:
+    raise SystemExit("Missing dependency: pyyaml. Install with: pip install pyyaml") from e
 
 
 def expand_frac_births_male_per_year(

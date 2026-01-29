@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 
-from utils.utils import load_cfg
+from utils import load_cfg
 
 try:
     import yaml

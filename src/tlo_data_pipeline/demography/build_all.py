@@ -38,9 +38,9 @@ def main() -> None:
     args, unknown = parser.parse_known_args()
 
     # 1) Build resources using your existing scripts (pass-through unknown args if you already use them)
-    _run([sys.executable, "scripts/build_census_resources.py", "--country", args.country, *unknown])
-    _run([sys.executable, "scripts/build_dhs_resources.py", "--country", args.country, *unknown])
-    _run([sys.executable, "scripts/build_wpp_resources.py", "--country", args.country, *unknown])
+    _run([sys.executable, "scripts/census.py", "--country", args.country, *unknown])
+    _run([sys.executable, "scripts/dhs.py", "--country", args.country, *unknown])
+    _run([sys.executable, "scripts/wpp.py", "--country", args.country, *unknown])
 
     if args.skip_report:
         print("\n[ok] Resources built; report skipped.")

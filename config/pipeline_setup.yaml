@@ -3,9 +3,9 @@ country_name: Malawi
 
 # Centralised path roots (so only country_code changes folder targeting)
 paths:
-  raw_dir: "raw_data/demography"
-  resources_dir: "resources/"
-  reports_dir: "reports/"
+  raw_dir: "inputs/demography"
+  resources_dir: "outputs/resources/"
+  reports_dir: "outputs/reports/"
 
 census:
   year: 2018

@@ -7,8 +7,8 @@ import pandas as pd
 
 from tlo.analysis.utils import make_calendar_period_lookup
 
-from utils.utils import load_cfg, load_regions
-from utils.fixes import (
+from utils import load_cfg, load_regions
+from fixes import (
     load_cell_patches,
     apply_cell_patches, rename_index_from_csv,
 )

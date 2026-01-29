@@ -7,8 +7,8 @@ from pathlib import Path
 import subprocess
 from typing import Any, Dict
 
-from .artifacts import discover_resources, load_all
-from .checks import run_all_checks
+from src.tlo_data_pipeline.demography.artifacts import discover_resources, load_all
+from src.tlo_data_pipeline.demography.checks import run_all_checks
 
 
 def _git_hash() -> str | None:

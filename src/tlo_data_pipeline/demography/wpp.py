@@ -12,8 +12,7 @@ from utils import load_cfg
 from demography_io import (
     ensure_dir,
     reformat_date_period_for_wpp,
-    WPPReader,
-    melt_year_age_groups,
+    WPPReader
 )
 
 try:

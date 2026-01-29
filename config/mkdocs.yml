@@ -1,0 +1,13 @@
+site_name: Demography Data Pipeline
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Inputs: inputs.md
+  - Outputs: outputs.md
+  - How it works: how_it_works.md
+  - Troubleshooting: troubleshooting.md
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true

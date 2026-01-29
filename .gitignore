@@ -1,0 +1,3 @@
+reports/**              # ignore all contents in reports
+site/                   # mkdocs build output
+raw_data/**            # ignore all contents of raw_data

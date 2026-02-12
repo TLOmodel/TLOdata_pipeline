@@ -7,10 +7,9 @@ import pandas as pd
 
 from tlo.analysis.utils import make_calendar_period_lookup
 
-from utils import load_cfg, load_regions
+from utils import load_cfg
 from fixes import (
-    load_cell_patches,
-    apply_cell_patches, rename_index_from_csv,
+    apply_cell_patches, rename_index_from_file,
 )
 
 
@@ -32,22 +31,25 @@ def main() -> None:
     census_cfg = cfg["census"]
     workingfile_popsizes = str(census_cfg["population_tables"])
     census_year = int(census_cfg["year"])
-    sheet_a1 = str(census_cfg.get("sheet_a1", "A1"))
-    sheet_a7 = str(census_cfg.get("sheet_a7", "A7"))
+    pop_totals = str(census_cfg.get("pop_totals", "pop_totals"))
+    age_dist = str(census_cfg.get("age_distribution", "age_distribution"))
+    region_sheet = str(census_cfg.get("regions", "regions"))
+    dist_name_fixes = str(census_cfg.get("dist_name_fixes", "dist_name_fixes"))
+    cell_patches = str(census_cfg.get("cell_patches", "cell_patches"))
 
-    region_names = load_regions(cfg)
     national_label = str(census_cfg.get("national_label", cfg.get("country_name", "National")))
 
     # Calendar periods
     (__tmp__, calendar_period_lookup) = make_calendar_period_lookup()
 
-    # Load cell patches once (CSV-driven)
-    patches_df = load_cell_patches(cfg)
-
     # -----------------------------------------
     # A1: totals by sex for each district
     # -----------------------------------------
-    a1 = pd.read_excel(workingfile_popsizes, sheet_name=sheet_a1)
+    working_file = pd.read_excel(workingfile_popsizes, sheet_name=None)
+    a1 = working_file[pop_totals]
+    region_names = working_file[region_sheet]["Region"].str.strip().tolist()
+    dist_names = working_file[dist_name_fixes]  # point to the CSV above
+    patches_df = working_file[cell_patches]
 
     # Keep your original cleanup (but safer)
     a1 = a1.drop([0, 1], errors="ignore")
@@ -132,6 +134,15 @@ def main() -> None:
     assert a1.drop(columns="Region").sum().astype(int).equals(national_total.astype(int))
     assert a1.groupby("Region").sum(numeric_only=True).astype(int).eq(region_totals.astype(int)).all().all()
 
+    if not dist_names.empty:
+        print('not empty')
+        a1, applied_map = rename_index_from_file(
+            a1,
+            dist_names,
+            canonical_districts=a1.index,  # optional
+            strict=False,  # keep False to mimic original behavior (no validation)
+        )
+
     canonical_districts = list(a1.index)
     district_names = canonical_districts
 
@@ -147,29 +158,30 @@ def main() -> None:
     # A7 read
     a7 = pd.read_excel(
         workingfile_popsizes,
-        sheet_name=sheet_a7,
-        usecols=[0] + list(range(2, 10)) + list(range(12, 21)),
+        sheet_name=age_dist,
         header=1,
         index_col=0,
     )
+    a7.index = a7.index.str.strip()
 
-    a7 = apply_cell_patches(a7, patches_df, sheet=sheet_a7, strict=True)
+    if not patches_df.empty:
+        a7 = apply_cell_patches(a7, patches_df, sheet=age_dist, strict=True)
 
     # Old logic: drop NA + numeric
     a7 = a7.dropna()
     a7 = a7.astype(int)
 
-    mapping_csv = Path(cfg["name_fixes"]["districts_file"])  # point to the CSV above
-
-    a7, applied_map = rename_index_from_csv(
-        a7,
-        mapping_csv,
-        canonical_districts=district_nums.index,  # optional
-        strict=False,  # keep False to mimic original behavior (no validation)
-    )
+    if not dist_names.empty:
+        a7, applied_map = rename_index_from_file(
+            a7,
+            dist_names,
+            canonical_districts=district_nums.index,  # optional
+            strict=False,  # keep False to mimic original behavior (no validation)
+        )
 
     # Extract districts present in A1 (canonical list)
     extract = a7.loc[a7.index.isin(district_nums.index)].copy()
+    extract.drop(columns=["Total"], inplace=True)
 
     # Checks
     assert set(extract.index) == set(district_nums.index)
@@ -224,7 +236,7 @@ def main() -> None:
         ["Variant", "District", "District_Num", "Region", "Year", "Period", "Age_Grp", "Sex", "Count"]
     ]
 
-    # Save resource file
+    # Save resource-file
     out_path = resources_dir / f"ResourceFile_PopulationSize_{census_year}Census.csv"
     table.to_csv(out_path, index=False)
 

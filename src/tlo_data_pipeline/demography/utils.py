@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import pandas as pd
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 import re
 
 import yaml
@@ -56,51 +55,3 @@ def load_cfg(path: Union[str, Path] = "config/pipeline_setup.yaml") -> Dict[str,
         raise ValueError(f"Config must be a YAML mapping/object, got: {type(cfg)}")
 
     return resolve_templates(cfg)
-
-
-def load_regions(cfg: Dict[str, Any]) -> List[str]:
-    """
-    Return regions list from:
-      1) cfg['census']['regions'] (inline list), else
-      2) cfg['census']['regions_file'] (CSV/TXT), else
-      3) error
-    """
-    census = cfg.get("census", {})
-    if not isinstance(census, dict):
-        raise ValueError("cfg['census'] must be a mapping")
-
-    # 1) Inline list
-    regions = census.get("regions")
-    if regions is not None:
-        if not isinstance(regions, list) or not all(isinstance(x, str) for x in regions):
-            raise ValueError("census.regions must be a list of strings")
-        return [r.strip() for r in regions if r.strip()]
-
-    # 2) External file
-    regions_file = census.get("regions_file")
-    if regions_file:
-        p = Path(str(regions_file))
-        if not p.exists():
-            raise FileNotFoundError(f"Regions file not found: {p}")
-
-        if p.suffix.lower() in [".csv"]:
-            col = str(census.get("regions_col", "Region"))
-            df = pd.read_csv(p)
-            if col not in df.columns:
-                raise ValueError(f"Regions CSV missing column '{col}': {p}")
-            vals = df[col].dropna().astype(str).tolist()
-            vals = [v.strip() for v in vals if v.strip()]
-            if not vals:
-                raise ValueError(f"No regions found in {p} column '{col}'")
-            return vals
-
-        if p.suffix.lower() in [".txt"]:
-            vals = [line.strip() for line in p.read_text().splitlines()]
-            vals = [v for v in vals if v and not v.startswith("#")]
-            if not vals:
-                raise ValueError(f"No regions found in {p}")
-            return vals
-
-        raise ValueError(f"Unsupported regions_file extension: {p.suffix} (use .csv or .txt)")
-
-    raise ValueError("No regions provided. Set census.regions or census.regions_file.")

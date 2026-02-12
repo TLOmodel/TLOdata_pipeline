@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
@@ -15,8 +14,7 @@ def _norm_name(s: str) -> str:
     s = " ".join(s.strip().split())
     return s
 
-def load_name_mapping_csv(path: Path) -> Dict[str, str]:
-    df = pd.read_csv(path)
+def load_name_mapping_csv(df: pd.DataFrame) -> Dict[str, str]:
     required = {"from", "to"}
     if not required.issubset(df.columns):
         raise ValueError(f"Mapping CSV must have columns {required}. Found: {list(df.columns)}")
@@ -27,9 +25,9 @@ def load_name_mapping_csv(path: Path) -> Dict[str, str]:
     return dict(zip(df["from"], df["to"]))
 
 
-def rename_index_from_csv(
+def rename_index_from_file(
     df: pd.DataFrame,
-    mapping_csv: Path,
+    dist_names: pd.DataFrame,
     *,
     canonical_districts: Optional[Iterable[str]] = None,
     strict: bool = False,
@@ -42,7 +40,7 @@ def rename_index_from_csv(
     - If strict=True and canonical_districts provided, errors if any index values
       (after rename) are not in canonical_districts.
     """
-    mapping = load_name_mapping_csv(mapping_csv)
+    mapping = load_name_mapping_csv(dist_names)
 
     out = df.copy()
     before = out.index.astype(str)
@@ -59,18 +57,6 @@ def rename_index_from_csv(
                              + (f" (and {len(unmatched)-10} more)" if len(unmatched) > 10 else ""))
 
     return out, applied
-
-def _read_cell_patches_csv(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame(columns=["sheet", "row_label", "col_label", "value"])
-
-    df = pd.read_csv(path, dtype=str)
-    df.columns = [c.strip() for c in df.columns]
-    required = {"sheet", "row_label", "col_label", "value"}
-    if not required.issubset(set(df.columns)):
-        raise ValueError(f"Cell patches CSV must have columns {required}. Found: {list(df.columns)}")
-    return df
-
 
 def apply_cell_patches(
     df: pd.DataFrame,
@@ -127,10 +113,3 @@ def apply_cell_patches(
 
     return out
 
-
-def load_cell_patches(cfg: Dict[str, Any]) -> pd.DataFrame:
-    cell_fixes = cfg.get("cell_fixes", {}) if isinstance(cfg.get("cell_fixes", {}), dict) else {}
-    patches_file = cell_fixes.get("patches_file")
-    if not patches_file:
-        return pd.DataFrame(columns=["sheet", "row_label", "col_label", "value"])
-    return _read_cell_patches_csv(Path(str(patches_file)))

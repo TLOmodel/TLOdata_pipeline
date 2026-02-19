@@ -1,23 +1,60 @@
 #!/usr/bin/env python3
+"""
+This script processes census data to produce demographic insights such as age-sex
+distribution tables, regional totals, and national aggregates. It includes data
+reading, cleaning, validation, and transformation.
+
+This script leverages configurations loaded from external files to manage file paths,
+process census tables, and interpret calendar periods for demographic data preparation.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-
-from tlo.analysis.utils import make_calendar_period_lookup
-
-from utils import load_cfg
 from fixes import (
-    apply_cell_patches, rename_index_from_file,
+    apply_cell_patches,
+    rename_index_from_file,
 )
+from tlo.analysis.utils import make_calendar_period_lookup
+from utils import load_cfg
 
 
 def ensure_dir(p: Path) -> None:
+    """
+    Ensures the existence of a directory at the specified path. If the directory
+    does not exist, it will be created. Parent directories will be created as well
+    if they do not already exist.
+
+    Args:
+        p (Path): The path to the directory to be created.
+
+    """
     p.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
+    """
+    Main function responsible for orchestrating the processing of census data and generating
+    outputs.
+
+    The function processes input configuration data (`cfg`) to extract file paths, allocate
+    resources, parse population data, clean up table structures, manage calendar periods,
+    compute demographic aggregates, and construct age-sex distribution tables for districts.
+
+    Raises:
+        ValueError: If unexpected table sizes, missing required data, or non-numeric values
+                    are encountered.
+        KeyError: If required regions or national labels are not found in the data.
+
+    Parameters:
+        None
+
+    Returns:
+        None
+    """
     cfg = load_cfg()
 
     # Outputs
@@ -40,7 +77,7 @@ def main() -> None:
     national_label = str(census_cfg.get("national_label", cfg.get("country_name", "National")))
 
     # Calendar periods
-    (__tmp__, calendar_period_lookup) = make_calendar_period_lookup()
+    __temp__, calendar_period_lookup = make_calendar_period_lookup()
 
     # -----------------------------------------
     # A1: totals by sex for each district
@@ -79,13 +116,18 @@ def main() -> None:
         column_titles = [f"Total_{census_year}", f"Male_{census_year}", f"Female_{census_year}"]
     else:
         column_titles = [
-            f"Total_{census_year}", f"Male_{census_year}", f"Female_{census_year}",
-            f"Total_{other_year}", f"Male_{other_year}", f"Female_{other_year}",
+            f"Total_{census_year}",
+            f"Male_{census_year}",
+            f"Female_{census_year}",
+            f"Total_{other_year}",
+            f"Male_{other_year}",
+            f"Female_{other_year}",
         ]
 
     if a1.shape[1] != len(column_titles):
         raise ValueError(
-            f"A1 unexpected number of columns after cleanup: got {a1.shape[1]} expected {len(column_titles)}. "
+            f"A1 unexpected number of columns after cleanup: got "
+            f"{a1.shape[1]} expected {len(column_titles)}. "
             "Check sheet layout / cleanup steps and/or set census.other_year."
         )
 
@@ -96,12 +138,14 @@ def main() -> None:
     # Coerce numeric (robust to commas/nbsp)
     a1[column_titles] = (
         a1[column_titles]
-        .apply(lambda s: (
-            s.astype(str)
-            .str.replace(",", "", regex=False)
-            .str.replace("\u00a0", "", regex=False)
-            .str.strip()
-        ))
+        .apply(
+            lambda s: (
+                s.astype(str)
+                .str.replace(",", "", regex=False)
+                .str.replace("\u00a0", "", regex=False)
+                .str.strip()
+            )
+        )
         .apply(pd.to_numeric, errors="coerce")
     )
     if a1[column_titles].isna().any().any():
@@ -113,7 +157,9 @@ def main() -> None:
     try:
         region_totals = a1.loc[region_names].copy()
     except KeyError as e:
-        raise KeyError(f"One or more regions in census.regions not found in A1 index: {region_names}") from e
+        raise KeyError(
+            f"One or more regions in census.regions not found in A1 index: {region_names}"
+        ) from e
 
     try:
         national_total = a1.loc[national_label].copy()
@@ -132,11 +178,17 @@ def main() -> None:
 
     # Checks (same as your intent)
     assert a1.drop(columns="Region").sum().astype(int).equals(national_total.astype(int))
-    assert a1.groupby("Region").sum(numeric_only=True).astype(int).eq(region_totals.astype(int)).all().all()
+    assert (
+        a1.groupby("Region")
+        .sum(numeric_only=True)
+        .astype(int)
+        .eq(region_totals.astype(int))
+        .all()
+        .all()
+    )
 
     if not dist_names.empty:
-        print('not empty')
-        a1, applied_map = rename_index_from_file(
+        a1 = rename_index_from_file(
             a1,
             dist_names,
             canonical_districts=a1.index,  # optional
@@ -172,7 +224,7 @@ def main() -> None:
     a7 = a7.astype(int)
 
     if not dist_names.empty:
-        a7, applied_map = rename_index_from_file(
+        a7 = rename_index_from_file(
             a7,
             dist_names,
             canonical_districts=district_nums.index,  # optional
@@ -196,14 +248,18 @@ def main() -> None:
     # Build district x age x sex breakdown
     # -----------------------------------------
     males = frac_in_each_age_grp.mul(a1[f"Male_{census_year}"], axis=0)
-    assert (males.sum(axis=1).astype("float32") == a1[f"Male_{census_year}"].astype("float32")).all()
+    assert (
+        males.sum(axis=1).astype("float32") == a1[f"Male_{census_year}"].astype("float32")
+    ).all()
     males["district"] = males.index
     males_melt = males.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     males_melt["sex"] = "M"
     males_melt = males_melt.merge(a1[["Region"]], left_on="district", right_index=True)
 
     females = frac_in_each_age_grp.mul(a1[f"Female_{census_year}"], axis=0)
-    assert (females.sum(axis=1).astype("float32") == a1[f"Female_{census_year}"].astype("float32")).all()
+    assert (
+        females.sum(axis=1).astype("float32") == a1[f"Female_{census_year}"].astype("float32")
+    ).all()
     females["district"] = females.index
     females_melt = females.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     females_melt["sex"] = "F"
@@ -213,7 +269,12 @@ def main() -> None:
     table = pd.concat([males_melt, females_melt], ignore_index=True)
     table["number"] = table["number"].astype(float)
     table.rename(
-        columns={"district": "District", "age_grp": "Age_Grp_Special", "sex": "Sex", "number": "Count"},
+        columns={
+            "district": "District",
+            "age_grp": "Age_Grp_Special",
+            "sex": "Sex",
+            "number": "Count",
+        },
         inplace=True,
     )
     table["Age_Grp_Special"] = table["Age_Grp_Special"].replace({"Less than 1 Year": "0-1"})
@@ -223,17 +284,33 @@ def main() -> None:
 
     # Collapse 0-1 and 1-4 into 0-4
     table["Age_Grp"] = table["Age_Grp_Special"].replace({"0-1": "0-4", "1-4": "0-4"})
-    table["Count_By_Age_Grp"] = table.groupby(by=["Age_Grp", "District", "Sex"])["Count"].transform("sum")
+    table["Count_By_Age_Grp"] = table.groupby(by=["Age_Grp", "District", "Sex"])["Count"].transform(
+        "sum"
+    )
     table = table.drop_duplicates(subset=["Age_Grp", "District", "Sex"])
     table = table.rename(columns={"Count_By_Age_Grp": "Count", "Count": "Count_By_Age_Grp_Special"})
 
     # Merge District_Num
-    table = table.merge(district_nums[["District_Num"]], left_on=["District"], right_index=True, how="left")
-    assert 0 == len(set(district_nums["District_Num"]).difference(set(pd.unique(table["District_Num"]))))
+    table = table.merge(
+        district_nums[["District_Num"]], left_on=["District"], right_index=True, how="left"
+    )
+    assert 0 == len(
+        set(district_nums["District_Num"]).difference(set(pd.unique(table["District_Num"])))
+    )
 
     # Re-order columns
     table = table[
-        ["Variant", "District", "District_Num", "Region", "Year", "Period", "Age_Grp", "Sex", "Count"]
+        [
+            "Variant",
+            "District",
+            "District_Num",
+            "Region",
+            "Year",
+            "Period",
+            "Age_Grp",
+            "Sex",
+            "Count",
+        ]
     ]
 
     # Save resource-file

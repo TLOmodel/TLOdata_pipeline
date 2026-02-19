@@ -1,24 +1,31 @@
 #!/usr/bin/env python3
+"""
+Provides functions for demographic analysis and population data processing.
+
+Includes implementations such as expanding birth ratio data by year and building
+annual population datasets for World Population Prospects (WPP), including the ability
+to initialize population data based on census resources.
+
+Functions
+---------
+expand_frac_births_male_per_year:
+    Expands the fraction of male births data over a specified year range.
+
+build_wpp_annual_and_init_population:
+    Handles WPP annual population reading, processing, and generation of
+    initial population datasets split by districts based on census breakdowns.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from demography_io import WPPReader, ensure_dir, reformat_date_period_for_wpp
 from tlo.analysis.utils import make_calendar_period_lookup
 from tlo.util import create_age_range_lookup
-
 from utils import load_cfg
-from demography_io import (
-    ensure_dir,
-    reformat_date_period_for_wpp,
-    WPPReader
-)
-
-try:
-    import yaml
-except ImportError as e:
-    raise SystemExit("Missing dependency: pyyaml. Install with: pip install pyyaml") from e
 
 
 def expand_frac_births_male_per_year(
@@ -65,7 +72,9 @@ def expand_frac_births_male_per_year(
     for year in range(year_lo, year_hi):
         hits = df.loc[(year >= df["low_year"]) & (year <= df["high_year"])].copy()
         if hits.empty:
-            raise ValueError(f"WPP frac_births_male lookup failed: year not covered by any Period: {year}")
+            raise ValueError(
+                f"WPP frac_births_male lookup failed: year not covered by any Period: {year}"
+            )
 
         # Choose best available variant for that year
         hits = hits.sort_values(["priority", "low_year"], ascending=[True, True])
@@ -74,6 +83,7 @@ def expand_frac_births_male_per_year(
         records.append({"Year": year, "frac_births_male": frac})
 
     return pd.DataFrame(records)
+
 
 def build_wpp_annual_and_init_population(
     *,
@@ -89,7 +99,8 @@ def build_wpp_annual_and_init_population(
     Recreates the original pipeline block:
       - Read annual single-year population by age (ESTIMATES + MEDIUM VARIANT) for M/F
       - Output ResourceFile_Pop_Annual_WPP.csv
-      - Use init_year (default 2010) national age/sex totals and split by district using census breakdown
+      - Use init_year (default 2010) national age/sex totals and
+        split by district using census breakdown
       - Output ResourceFile_Population_2010.csv
 
     Requires in config (wpp dict):
@@ -99,14 +110,16 @@ def build_wpp_annual_and_init_population(
       - pop_annual_multiplier (default 1000)
       - pop_annual_age_cols_slice_end (default 103) to match original [2:103]
     """
-    (__tmp__, calendar_period_lookup) = make_calendar_period_lookup()
-    (__tmp2__, age_grp_lookup) = create_age_range_lookup(min_age=0, max_age=100, range_size=5)
+    __tmp__, calendar_period_lookup = make_calendar_period_lookup()
+    __tmp2__, age_grp_lookup = create_age_range_lookup(min_age=0, max_age=100, range_size=5)
 
     male_file = wpp["pop_annual_male_file"]
     female_file = wpp["pop_annual_female_file"]
     sheets = wpp.get("pop_annual_sheets", ["ESTIMATES", "MEDIUM VARIANT"])
     multiplier = float(wpp.get("pop_annual_multiplier", 1000))
-    age_cols_slice_end = int(wpp.get("pop_annual_age_cols_slice_end", 103))  # original used 103 (0..100 + some cols)
+    age_cols_slice_end = int(
+        wpp.get("pop_annual_age_cols_slice_end", 103)
+    )  # original used 103 (0..100 + some cols)
 
     def read_annual(file_path: str, sex: str) -> pd.DataFrame:
         dat = pd.concat(
@@ -163,7 +176,8 @@ def build_wpp_annual_and_init_population(
     census_df = pd.read_csv(census_path)
 
     # district_nums derived from census file itself
-    # (District, District_Num, Region should exist; census file has one row per (District,Age_Grp,Sex))
+    # (District, District_Num, Region should exist;
+    # census file has one row per (District,Age_Grp,Sex))
     district_nums = (
         census_df[["District", "District_Num", "Region"]]
         .drop_duplicates(subset=["District"])
@@ -172,30 +186,28 @@ def build_wpp_annual_and_init_population(
     )
 
     # district breakdown weights: sum counts by district / total
-    district_breakdown = (
-        census_df.groupby("District", as_index=True)["Count"].sum() / float(census_df["Count"].sum())
+    district_breakdown = census_df.groupby("District", as_index=True)["Count"].sum() / float(
+        census_df["Count"].sum()
     )
 
     # National age/sex totals for init_year from annual WPP
     pop_init = ests_melt.loc[ests_melt["Year"] == init_year, ["Sex", "Age", "Count"]].copy()
     if pop_init.empty:
         available = sorted(pd.unique(ests_melt["Year"]))
-        raise ValueError(f"WPP annual population has no rows for Year={init_year}. Available years: {available[:10]}...")
+        raise ValueError(
+            f"WPP annual population has no rows for Year={init_year}. "
+            f"Available years: {available[:10]}..."
+        )
 
     # Vectorized split by district:
     # create all combos of (Sex,Age) x District and multiply by district share
-    base = pop_init.merge(
-        district_breakdown.rename("district_share"),
-        how="cross"
-    )
+    base = pop_init.merge(district_breakdown.rename("district_share"), how="cross")
     base["Count"] = base["Count"] * base["district_share"]
     base = base.rename(columns={"District": "District"})  # no-op for clarity
 
     # after cross merge, the district key is the index name from district_breakdown; bring it back
     base = base.rename(columns={"index": "District"})
     if "District" not in base.columns:
-        # pandas cross merge result keeps right series name as column if it had one; handle both cases
-        # district_breakdown.rename("district_share") keeps index; after cross, index becomes column named 'District' in newer pandas
         pass
 
     # If the District column didn't appear, rebuild via explicit key
@@ -216,7 +228,10 @@ def build_wpp_annual_and_init_population(
     )
 
     if init_pop[["District_Num", "Region"]].isna().any().any():
-        raise AssertionError("District_Num/Region missing after merge — district name mismatch between census and district table.")
+        raise AssertionError(
+            "District_Num/Region missing after merge — district name mismatch "
+            "between census and district table."
+        )
 
     # Reorder
     init_pop = init_pop[["District", "District_Num", "Region", "Sex", "Age", "Count"]].copy()
@@ -247,6 +262,12 @@ def build_wpp_annual_and_init_population(
 
 
 def main() -> None:
+    """
+    Main function to process demographic data from configuration settings. It reads
+    population, births, deaths, and life table data from specified input files, performs
+    data transformations, and exports results into formatted output files.
+
+    """
     cfg = load_cfg()
     wpp = cfg["wpp"]
     resources_dir = Path(cfg["outputs"]["resources_dir"])
@@ -274,7 +295,9 @@ def main() -> None:
     ests = pd.concat([males, females], ignore_index=True)
 
     # Match your old behavior: age group columns are [2:23] after drops
-    ests[ests.columns[2:23]] = ests[ests.columns[2:23]] * float(wpp.get("pop_agegrp_multiplier", 1000))
+    ests[ests.columns[2:23]] = ests[ests.columns[2:23]] * float(
+        wpp.get("pop_agegrp_multiplier", 1000)
+    )
     ests["Variant"] = "WPP_" + ests["Variant"].astype(str)
     ests = ests.rename(columns={ests.columns[1]: "Year"})
 
@@ -288,17 +311,23 @@ def main() -> None:
         wpp["total_births_file"],
         sheets=wpp["fert_sheets_all"],
     )
-    tot_births = tot_births.melt(id_vars=["Variant"], var_name="Period", value_name="Total_Births").dropna()
+    tot_births = tot_births.melt(
+        id_vars=["Variant"], var_name="Period", value_name="Total_Births"
+    ).dropna()
     tot_births["Total_Births"] = 1000 * tot_births["Total_Births"]
 
     sex_ratio = reader.read_country_table(
         wpp["sex_ratio_file"],
         sheets=wpp["fert_sheets_est_med"],
     )
-    sex_ratio = sex_ratio.melt(id_vars=["Variant"], var_name="Period", value_name="M_to_F_Sex_Ratio").dropna()
+    sex_ratio = sex_ratio.melt(
+        id_vars=["Variant"], var_name="Period", value_name="M_to_F_Sex_Ratio"
+    ).dropna()
 
     # Copy Medium to Low/High (keeps your existing output semantics)
-    med = sex_ratio.loc[sex_ratio["Variant"] == "Medium variant", ["Period", "M_to_F_Sex_Ratio"]].copy()
+    med = sex_ratio.loc[
+        sex_ratio["Variant"] == "Medium variant", ["Period", "M_to_F_Sex_Ratio"]
+    ].copy()
     high = med.assign(Variant="High variant")
     low = med.assign(Variant="Low variant")
     sex_ratio = pd.concat([sex_ratio, high, low], ignore_index=True)
@@ -307,8 +336,12 @@ def main() -> None:
     reformat_date_period_for_wpp(births, period_col="Period")
     births.to_csv(resources_dir / "ResourceFile_TotalBirths_WPP.csv", index=False)
 
-    frac_birth_male_for_export = expand_frac_births_male_per_year(births, year_lo=1950, year_hi=2100)
-    frac_birth_male_for_export.to_csv(resources_dir / "ResourceFile_Pop_Frac_Births_Male.csv", index=False)
+    frac_birth_male_for_export = expand_frac_births_male_per_year(
+        births, year_lo=1950, year_hi=2100
+    )
+    frac_birth_male_for_export.to_csv(
+        resources_dir / "ResourceFile_Pop_Frac_Births_Male.csv", index=False
+    )
 
     # ASFR
     asfr = reader.read_country_table(
@@ -337,9 +370,13 @@ def main() -> None:
     )
     deaths = pd.concat([deaths_m, deaths_f], ignore_index=True)
 
-    deaths[deaths.columns[2:22]] = deaths[deaths.columns[2:22]] * float(wpp.get("deaths_multiplier", 1000))
+    deaths[deaths.columns[2:22]] = deaths[deaths.columns[2:22]] * float(
+        wpp.get("deaths_multiplier", 1000)
+    )
     reformat_date_period_for_wpp(deaths, period_col="Period")
-    deaths_melt = deaths.melt(id_vars=["Variant", "Period", "Sex"], value_name="Count", var_name="Age_Grp")
+    deaths_melt = deaths.melt(
+        id_vars=["Variant", "Period", "Sex"], value_name="Count", var_name="Age_Grp"
+    )
     deaths_melt["Variant"] = "WPP_" + deaths_melt["Variant"].astype(str)
     deaths_melt.to_csv(resources_dir / "ResourceFile_TotalDeaths_WPP.csv", index=False)
 
@@ -376,7 +413,9 @@ def main() -> None:
     lt = pd.concat([lt_m, lt_f], ignore_index=True)
 
     # Normalize variant naming
-    lt.loc[lt["Variant"].astype(str).str.contains("Medium", case=False, na=False), "Variant"] = "Medium"
+    lt.loc[lt["Variant"].astype(str).str.contains("Medium", case=False, na=False), "Variant"] = (
+        "Medium"
+    )
 
     lt = lt.rename(columns={"Central death rate m(x,n)": "death_rate"})
     lt["Variant"] = "WPP_" + lt["Variant"].astype(str)
@@ -414,12 +453,14 @@ def main() -> None:
                 )
                 if mask.sum() != 1:
                     raise AssertionError(
-                        f"LifeTable lookup failed: period={period} sex={sex} age={age_years} matches={mask.sum()}"
+                        f"LifeTable lookup failed: "
+                        f"period={period} sex={sex} age={age_years} matches={mask.sum()}"
                     )
                 dr = float(mort_sched.loc[mask, "death_rate"].values[0])
                 expanded.append(
                     {
-                        "fallbackyear": int(str(period).split("-")[0]),
+                        "fallbackyear":
+                            int(str(period).split("-", maxsplit=1)[0]),
                         "sex": sex,
                         "age_years": age_years,
                         "death_rate": dr,
@@ -435,7 +476,9 @@ def main() -> None:
     # 6) Annual population + initial district population (depends on census output)
     # -------------------------
     if wpp.get("enable_annual_pop", True):
-        census_year = int(cfg["census"]["year"]) if "census" in cfg and "year" in cfg["census"] else 2018
+        census_year = (
+            int(cfg["census"]["year"]) if "census" in cfg and "year" in cfg["census"] else 2018
+        )
         build_wpp_annual_and_init_population(
             wpp=wpp,
             resources_dir=resources_dir,

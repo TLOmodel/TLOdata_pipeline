@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
+"""
+A module for processing DHS-based demographic data files and exporting resources.
+
+This module includes utilities for handling complex demographic data from DHS
+(Demographic and Health Surveys) files, transforming and normalizing the data,
+and exporting it to standardized resource files. It also handles configuration
+loading, resource preparation, and outputs diagnostic information.
+
+Functions:
+- _coerce_year_series: Normalize year-like data in a Pandas Series.
+- _maybe_scale_probs: Scale probability data if necessary in a DataFrame.
+- read_dhs_u5_table: Process under-five mortality tables from DHS Excel data.
+- build_dhs_resources: Handle DHS resource generation based on configuration.
+- main: Main execution flow for orchestrating DHS resource processing.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 import pandas as pd
-
 from utils import load_cfg
-
-try:
-    import yaml
-except ImportError as e:
-    raise SystemExit("Missing dependency: pyyaml. Install with: pip install pyyaml") from e
 
 
 def _coerce_year_series(s: pd.Series) -> pd.Series:
@@ -70,7 +81,8 @@ def read_dhs_u5_table(dhs_file: str | Path, sheet: str, header: int = 1) -> pd.D
     raw.columns = cols
 
     # Identify Year column:
-    # Prefer a column explicitly named like 'Year'; else use an 'Unnamed' col; else fallback to first col
+    # Prefer a column explicitly named like 'Year'; else use an 'Unnamed' col; else
+    # fallback to first col
     year_col = None
     for c in raw.columns:
         if str(c).strip().lower() == "year":
@@ -94,7 +106,9 @@ def read_dhs_u5_table(dhs_file: str | Path, sheet: str, header: int = 1) -> pd.D
 
     if est_col is None or lo_col is None or hi_col is None:
         # Fallback: try to detect by taking the last 3 numeric columns
-        numeric_cols = [c for c in raw.columns if pd.to_numeric(raw[c], errors="coerce").notna().any()]
+        numeric_cols = [
+            c for c in raw.columns if pd.to_numeric(raw[c], errors="coerce").notna().any()
+        ]
         # remove year_col if numeric
         numeric_cols_wo_year = [c for c in numeric_cols if c != year_col]
         if len(numeric_cols_wo_year) < 3:
@@ -102,7 +116,11 @@ def read_dhs_u5_table(dhs_file: str | Path, sheet: str, header: int = 1) -> pd.D
                 f"Could not identify Est/Lo/Hi columns in DHS U5 sheet. "
                 f"Found columns: {list(raw.columns)}"
             )
-        est_col, lo_col, hi_col = numeric_cols_wo_year[-3], numeric_cols_wo_year[-2], numeric_cols_wo_year[-1]
+        est_col, lo_col, hi_col = (
+            numeric_cols_wo_year[-3],
+            numeric_cols_wo_year[-2],
+            numeric_cols_wo_year[-1],
+        )
 
     out = raw[[year_col, est_col, lo_col, hi_col]].copy()
     out.columns = ["Year", "Est", "Lo", "Hi"]
@@ -123,10 +141,12 @@ def read_dhs_u5_table(dhs_file: str | Path, sheet: str, header: int = 1) -> pd.D
     # Scale if necessary (only when values look like per-1000)
     out = _maybe_scale_probs(out, ["Est", "Lo", "Hi"])
 
-    # Ensure proper ordering (your “actual output” is descending-ish; keep sheet order unless you want sort)
+    # Ensure proper ordering (your “actual output” is descending-ish;
+    # keep sheet order unless you want sort)
     out["Year"] = out["Year"].astype(int)
 
     return out
+
 
 def build_dhs_resources(cfg: dict, resources_dir: Path) -> None:
     """
@@ -152,18 +172,12 @@ def build_dhs_resources(cfg: dict, resources_dir: Path) -> None:
     # -------------------------
     # 1) DHS ASFR
     # -------------------------
-    dhs_asfr = pd.read_excel(
-        dhs_file,
-        sheet_name=dhs_cfg["sheet_asfr"]
-    )
+    dhs_asfr = pd.read_excel(dhs_file, sheet_name=dhs_cfg["sheet_asfr"])
 
     # Convert per-1000 to per-woman
     dhs_asfr.iloc[:, 1:] = dhs_asfr.iloc[:, 1:] / 1000
 
-    dhs_asfr.to_csv(
-        resources_dir / "ResourceFile_ASFR_DHS.csv",
-        index=False
-    )
+    dhs_asfr.to_csv(resources_dir / "ResourceFile_ASFR_DHS.csv", index=False)
 
     # -------------------------
     # 2) DHS Under-Five Mortality
@@ -175,7 +189,24 @@ def build_dhs_resources(cfg: dict, resources_dir: Path) -> None:
     )
     dhs_u5.to_csv(resources_dir / "ResourceFile_Under_Five_Mortality_DHS.csv", index=False)
 
+
 def main() -> None:
+    """
+    Main execution function for handling DHS resource creation and validation.
+
+    This function orchestrates configuration loading, prepares the necessary
+    resources directory, and executes the process of generating DHS resources.
+    It also includes checks for relevant DHS configuration and file existence
+    to ensure proper execution workflow. Diagnostic messages are printed for
+    user feedback regarding skipped or executed actions.
+
+    Raises:
+        FileNotFoundError: Raised if the configured DHS file does not exist
+        when required by the process flow.
+
+    Returns:
+        None
+    """
     cfg = load_cfg()
 
     resources_dir = Path(cfg["outputs"]["resources_dir"])

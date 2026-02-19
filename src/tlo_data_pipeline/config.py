@@ -1,7 +1,30 @@
-# src/tlo_data_pipeline/config.py
+"""
+Load and merge pipeline configuration based on country.
+
+This function loads a global default configuration along with a country-specific
+override configuration file, merges them, and returns the consolidated output.
+
+Precedence order during merging:
+1. Global defaults from the pipeline_setup.yaml file.
+2. Country-specific overrides in the countries/<country>.yaml file.
+
+Arguments:
+country (str): The specific country code for which the configuration should be loaded.
+config_dir (Path or None, optional): The directory containing the configuration files.
+    If not provided, a default path relative to the file structure is used.
+
+Returns:
+dict: The consolidated configuration dictionary.
+
+Raises:
+FileNotFoundError: If the global default configuration file or the country-specific
+    configuration file is not found.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 import yaml
 
 

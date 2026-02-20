@@ -3,7 +3,7 @@ name: Pylint
 on: [push]
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -13,14 +13,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install project + lint deps
         run: |
           python -m pip install --upgrade pip
-          pip install black pylint
+          pip install -e ".[dev]"
 
       - name: Check code formatting with Black
         run: |

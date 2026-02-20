@@ -82,14 +82,17 @@ def build_report(resources_dir: Path, reports_dir: Path) -> Path:
     lines.append(f"- Discovered resource CSVs: **{len(artifacts)}**\n")
 
     # checks summary
-    out_warn = {'n_pass': sum(r.status == "PASS" for r in check_results),
-                'n_warn': sum(r.status == "WARN" for r in check_results),
-                'n_fail': sum(r.status == "FAIL" for r in check_results),
-                'n_skip': sum(r.status == "SKIP" for r in check_results)
-                }
+    out_warn = {
+        "n_pass": sum(r.status == "PASS" for r in check_results),
+        "n_warn": sum(r.status == "WARN" for r in check_results),
+        "n_fail": sum(r.status == "FAIL" for r in check_results),
+        "n_skip": sum(r.status == "SKIP" for r in check_results),
+    }
     lines.append("## QA checks\n")
-    lines.append(f"- PASS: {out_warn['n_pass']} | WARN: {out_warn['n_warn']} "
-                 f"| FAIL: {out_warn['n_fail']} | SKIP: {out_warn['n_skip']}\n")
+    lines.append(
+        f"- PASS: {out_warn['n_pass']} | WARN: {out_warn['n_warn']} "
+        f"| FAIL: {out_warn['n_fail']} | SKIP: {out_warn['n_skip']}\n"
+    )
 
     lines.append("| Check | Status | Message |")
     lines.append("|---|---:|---|")

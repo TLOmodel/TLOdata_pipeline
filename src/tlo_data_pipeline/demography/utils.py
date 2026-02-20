@@ -88,18 +88,18 @@ def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> 
     def chunks(items, n):
         """Takes a list and divides it into parts of size n"""
         for index in range(0, len(items), n):
-            yield items[index:index + n]
+            yield items[index : index + n]
 
     # split all the ages from min to limit
     parts = chunks(range(min_age, max_age), range_size)
 
-    default_category = f'{max_age}+'
+    default_category = f"{max_age}+"
     lookup = defaultdict(lambda: default_category)
     age_categories = []
 
     # create category for minimum age
     if min_age > 0:
-        under_min_age_category = f'0-{min_age}'
+        under_min_age_category = f"0-{min_age}"
         age_categories.append(under_min_age_category)
         for i in range(0, min_age):
             lookup[i] = under_min_age_category
@@ -108,7 +108,7 @@ def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> 
     for part in parts:
         start = part.start
         end = part.stop - 1
-        value = f'{start}-{end}'
+        value = f"{start}-{end}"
         age_categories.append(value)
         for i in range(start, part.stop):
             lookup[i] = value
@@ -116,6 +116,7 @@ def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> 
     age_categories.append(default_category)
 
     return lookup
+
 
 def make_calendar_period_lookup():
     """Returns a dictionary mapping calendar year (in years) to five year period

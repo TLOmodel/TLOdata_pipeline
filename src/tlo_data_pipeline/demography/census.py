@@ -62,6 +62,7 @@ class CensusInputs:
         other_year: Additional year of reference for the dataset, or None if not
                     applicable.
     """
+
     workingfile_popsizes: str
     census_year: int
     pop_totals_sheet: str
@@ -85,6 +86,7 @@ class CensusOutputs:
         resources_dir: Directory path used to store resource files for census processing.
         report_dir: Directory path used for saving generated reports.
     """
+
     resources_dir: Path
     report_dir: Path
 
@@ -107,6 +109,7 @@ class CensusContext:
         inputs: The inputs object holding all data required for the census
                 processing.
     """
+
     cfg: Mapping[str, Any]
     outputs: CensusOutputs
     inputs: CensusInputs
@@ -257,8 +260,8 @@ def _load_a1_and_district_nums(
     workbook: dict[str, pd.DataFrame],
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
     a1_raw = workbook[ctx.inputs.pop_totals_sheet]
-    region_names = workbook['regions']["Region"].str.strip().tolist()
-    dist_names = workbook['dist_name_fixes']
+    region_names = workbook["regions"]["Region"].str.strip().tolist()
+    dist_names = workbook["dist_name_fixes"]
 
     a1 = _cleanup_a1(a1_raw)
     other_year = _infer_other_year(ctx, a1)
@@ -318,8 +321,8 @@ def _load_a7_age_distribution(
     workbook: dict[str, pd.DataFrame],
     district_nums: pd.DataFrame,
 ) -> pd.DataFrame:
-    dist_names = workbook['dist_name_fixes']
-    patches_df = workbook['cell_patches']
+    dist_names = workbook["dist_name_fixes"]
+    patches_df = workbook["cell_patches"]
 
     a7 = pd.read_excel(
         ctx.inputs.workingfile_popsizes,

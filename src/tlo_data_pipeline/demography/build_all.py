@@ -67,12 +67,33 @@ def main() -> None:
 
     # 1) Build resources using your existing scripts (pass-through unknown args if
     #    you already use them)
-    _run([sys.executable, "src/tlo_data_pipeline/demography/census.py", "--country",
-          args.country, *unknown])
-    _run([sys.executable, "src/tlo_data_pipeline/demography/dhs.py", "--country",
-          args.country, *unknown])
-    _run([sys.executable, "src/tlo_data_pipeline/demography/wpp.py", "--country",
-          args.country, *unknown])
+    _run(
+        [
+            sys.executable,
+            "src/tlo_data_pipeline/demography/census.py",
+            "--country",
+            args.country,
+            *unknown,
+        ]
+    )
+    _run(
+        [
+            sys.executable,
+            "src/tlo_data_pipeline/demography/dhs.py",
+            "--country",
+            args.country,
+            *unknown,
+        ]
+    )
+    _run(
+        [
+            sys.executable,
+            "src/tlo_data_pipeline/demography/wpp.py",
+            "--country",
+            args.country,
+            *unknown,
+        ]
+    )
 
     if args.skip_report:
         print("\n[ok] Resources built; report skipped.")

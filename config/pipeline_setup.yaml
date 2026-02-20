@@ -1,6 +1,6 @@
-country_code: insert_country_code
-country_name: insert_country_name
-wpp_name: insert_country_wpp_name
+country_code: Tz
+country_name: Tanzania
+wpp_name: United Republic of Tanzania
 
 # Centralised path roots (so only country_code changes folder targeting)
 paths:
@@ -10,7 +10,7 @@ paths:
 
 census:
   year: 2012
-  population_tables: "{paths.input_dir}/census/country_census_template.xlsx"
+  population_tables: "{paths.input_dir}/census/tanzania_census.xlsx"
   pop_totals: "pop_totals"
   age_dist: "age_distribution"
   regions: "regions"

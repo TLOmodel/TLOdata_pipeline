@@ -20,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
-from utils import load_cfg
+from tlo_data_pipeline.demography.utils import load_cfg
 
 
 def _coerce_year_series(s: pd.Series) -> pd.Series:
@@ -175,7 +175,8 @@ def build_dhs_resources(cfg: dict, resources_dir: Path) -> None:
     dhs_asfr = pd.read_excel(dhs_file, sheet_name=dhs_cfg["sheet_asfr"])
 
     # Convert per-1000 to per-woman
-    dhs_asfr.iloc[:, 1:] = dhs_asfr.iloc[:, 1:] / 1000
+    value_cols = dhs_asfr.columns[1:]
+    dhs_asfr[value_cols] = dhs_asfr[value_cols].astype(float) / 1000.0
 
     dhs_asfr.to_csv(resources_dir / "ResourceFile_ASFR_DHS.csv", index=False)
 

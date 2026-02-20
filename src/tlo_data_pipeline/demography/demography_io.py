@@ -39,7 +39,6 @@ def reformat_date_period_for_wpp(df: pd.DataFrame, period_col: str = "Period") -
     Modifies df in-place.
     """
     t = df[period_col].astype(str).str.split("-", n=1, expand=True)
-    print(t)
     lo = t[0].astype(int)
     hi = t[1].astype(int) - 1
     df[period_col] = lo.astype(str) + "-" + hi.astype(str)
@@ -172,48 +171,3 @@ class WPPReader:
             for k, v in extra_cols.items():
                 df[k] = v
         return df
-
-
-def melt_year_age_groups(
-    df: pd.DataFrame,
-    id_vars: list[str],
-    value_name: str,
-    var_name: str = "Age_Grp",
-    multiplier: float = 1.0,
-    value_cols_slice: slice | None = None,
-) -> pd.DataFrame:
-    """
-    Transforms a wide-format DataFrame into a long-format DataFrame while optionally scaling
-    selected columns by a multiplier. This function is designed for datasets with age group
-    columns or similar categorical breakdowns that need reformatting or scaling.
-
-    Args:
-        df (pd.DataFrame): Input DataFrame in wide format.
-        id_vars (list[str]): Columns to use as identifier variables in the resulting melted
-                             DataFrame.
-        value_name (str): Name for the values column in the melted DataFrame.
-        var_name (str, optional): Name for the variable column in the melted DataFrame.
-                                   Defaults to "Age_Grp".
-        multiplier (float, optional): Factor to scale the values in the numeric columns.
-                                       Defaults to 1.0.
-        value_cols_slice (Optional[slice], optional): Slice object indicating a range of column
-                                                      indices for the columns to be scaled.
-                                                      If not provided, all non-identifier columns
-                                                      will be scaled. Defaults to None.
-
-    Returns:
-        pd.DataFrame: A long-format DataFrame after applying transformations.
-
-    Raises:
-        None
-    """
-    out = df.copy()
-    if value_cols_slice is not None:
-        cols = out.columns[value_cols_slice]
-        out[cols] = out[cols] * multiplier
-    else:
-        # scale all non-id columns
-        cols = [c for c in out.columns if c not in id_vars]
-        out[cols] = out[cols] * multiplier
-
-    return out.melt(id_vars=id_vars, value_name=value_name, var_name=var_name)

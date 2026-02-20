@@ -1,62 +1,118 @@
 #!/usr/bin/env python3
 """
-This script processes census data to produce demographic insights such as age-sex
-distribution tables, regional totals, and national aggregates. It includes data
-reading, cleaning, validation, and transformation.
+Process census data into demographic outputs:
+- totals by sex per district
+- age distribution per district
+- district x age x sex long table (resource file)
 
-This script leverages configurations loaded from external files to manage file paths,
-process census tables, and interpret calendar periods for demographic data preparation.
+Uses external configuration to locate files/sheets and apply naming/cell patches.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
-from fixes import (
-    apply_cell_patches,
-    rename_index_from_file,
-)
-from tlo.analysis.utils import make_calendar_period_lookup
-from utils import load_cfg
+
+from tlo_data_pipeline.demography.fixes import apply_cell_patches, rename_index_from_file
+from tlo_data_pipeline.demography.utils import load_cfg, make_calendar_period_lookup
 
 
 def ensure_dir(p: Path) -> None:
     """
-    Ensures the existence of a directory at the specified path. If the directory
-    does not exist, it will be created. Parent directories will be created as well
-    if they do not already exist.
+    Ensures that the directory specified by the given Path object exists.
+    If it does not exist, it will create the directory along with any necessary
+    parent directories. If the directory already exists, the function does nothing.
 
     Args:
-        p (Path): The path to the directory to be created.
+        p (Path): The path of the directory to ensure existence.
 
+    Returns:
+        None
+
+    Raises:
+        OSError: If the directory cannot be created due to an operating system-related error.
     """
     p.mkdir(parents=True, exist_ok=True)
 
 
-def main() -> None:
+@dataclass(frozen=True)
+class CensusInputs:
     """
-    Main function responsible for orchestrating the processing of census data and generating
-    outputs.
+    Represents the inputs required for processing census data.
 
-    The function processes input configuration data (`cfg`) to extract file paths, allocate
-    resources, parse population data, clean up table structures, manage calendar periods,
-    compute demographic aggregates, and construct age-sex distribution tables for districts.
+    This class is a data structure intended for holding and managing data required
+    for census analysis. The attributes correspond to relevant file paths, sheet
+    names, and other parameters necessary for processing population and census
+    details. As it is marked with `frozen=True`, the class instances are immutable,
+    ensuring data integrity during operations.
 
-    Raises:
-        ValueError: If unexpected table sizes, missing required data, or non-numeric values
-                    are encountered.
-        KeyError: If required regions or national labels are not found in the data.
-
-    Parameters:
-        None
-
-    Returns:
-        None
+    Attributes:
+        workingfile_popsizes: Path to the file containing population sizes.
+        census_year: The year for which the census is conducted.
+        pop_totals_sheet: Name of the sheet containing population totals.
+        age_dist_sheet: Name of the sheet containing age distribution data.
+        region_sheet: Name of the sheet containing regional data.
+        dist_name_fixes_sheet: Name of the sheet for district name fixes.
+        cell_patches_sheet: Name of the sheet for cell patching data.
+        national_label: Label denoting national-level data identifiers.
+        other_year: Additional year of reference for the dataset, or None if not
+                    applicable.
     """
-    cfg = load_cfg()
+    workingfile_popsizes: str
+    census_year: int
+    pop_totals_sheet: str
+    age_dist_sheet: str
+    national_label: str
+    other_year: int | None
 
+
+@dataclass(frozen=True)
+class CensusOutputs:
+    """
+    Represents the output directories for census processing.
+
+    This dataclass encapsulates the directories used for managing
+    resources and reports in a census processing workflow. The
+    `resources_dir` is intended to store any resource files utilized
+    during processing, and `report_dir` serves as the location to
+    save output reports or result files.
+
+    Attributes:
+        resources_dir: Directory path used to store resource files for census processing.
+        report_dir: Directory path used for saving generated reports.
+    """
+    resources_dir: Path
+    report_dir: Path
+
+
+@dataclass(frozen=True)
+class CensusContext:
+    """
+    Encapsulates context information for census data processing.
+
+    This class is designed to hold configuration settings, input data, and
+    output data for census processing workflows. It ensures the necessary
+    components for executing a processing pipeline are encapsulated in a
+    single frozen object for immutability and easy access.
+
+    Attributes:
+        cfg: Configuration mapping containing key-value settings for the
+             census process.
+        outputs: The outputs object containing all data resultant from the
+                 census processing.
+        inputs: The inputs object holding all data required for the census
+                processing.
+    """
+    cfg: Mapping[str, Any]
+    outputs: CensusOutputs
+    inputs: CensusInputs
+
+
+def _parse_context(cfg: Mapping[str, Any]) -> CensusContext:
     # Outputs
     resources_dir = Path(cfg["outputs"]["resources_dir"])
     ensure_dir(resources_dir)
@@ -64,31 +120,30 @@ def main() -> None:
     report_dir = Path(cfg["outputs"]["reports_dir"]) / str(cfg["country_code"])
     ensure_dir(report_dir)
 
-    # Census inputs
     census_cfg = cfg["census"]
-    workingfile_popsizes = str(census_cfg["population_tables"])
     census_year = int(census_cfg["year"])
-    pop_totals = str(census_cfg.get("pop_totals", "pop_totals"))
-    age_dist = str(census_cfg.get("age_distribution", "age_distribution"))
-    region_sheet = str(census_cfg.get("regions", "regions"))
-    dist_name_fixes = str(census_cfg.get("dist_name_fixes", "dist_name_fixes"))
-    cell_patches = str(census_cfg.get("cell_patches", "cell_patches"))
 
-    national_label = str(census_cfg.get("national_label", cfg.get("country_name", "National")))
+    inputs = CensusInputs(
+        workingfile_popsizes=str(census_cfg["population_tables"]),
+        census_year=census_year,
+        pop_totals_sheet=str(census_cfg.get("pop_totals", "pop_totals")),
+        age_dist_sheet=str(census_cfg.get("age_distribution", "age_distribution")),
+        national_label=str(census_cfg.get("national_label", cfg.get("country_name", "National"))),
+        other_year=(
+            int(census_cfg["other_year"]) if census_cfg.get("other_year") is not None else None
+        ),
+    )
 
-    # Calendar periods
-    __temp__, calendar_period_lookup = make_calendar_period_lookup()
+    outputs = CensusOutputs(resources_dir=resources_dir, report_dir=report_dir)
+    return CensusContext(cfg=cfg, outputs=outputs, inputs=inputs)
 
-    # -----------------------------------------
-    # A1: totals by sex for each district
-    # -----------------------------------------
-    working_file = pd.read_excel(workingfile_popsizes, sheet_name=None)
-    a1 = working_file[pop_totals]
-    region_names = working_file[region_sheet]["Region"].str.strip().tolist()
-    dist_names = working_file[dist_name_fixes]  # point to the CSV above
-    patches_df = working_file[cell_patches]
 
-    # Keep your original cleanup (but safer)
+def _load_workbook(ctx: CensusContext) -> dict[str, pd.DataFrame]:
+    return pd.read_excel(ctx.inputs.workingfile_popsizes, sheet_name=None)
+
+
+def _cleanup_a1(a1: pd.DataFrame) -> pd.DataFrame:
+    # Keep original cleanup but safer
     a1 = a1.drop([0, 1], errors="ignore")
     if len(a1.index) > 0:
         a1 = a1.drop(a1.index[0], errors="ignore")
@@ -97,47 +152,44 @@ def main() -> None:
     a1.index = a1.iloc[:, 0].astype(str)
     a1 = a1.drop(a1.columns[[0]], axis=1)
     a1 = a1.dropna(how="all", axis=1)
+    return a1
 
-    # Determine column titles (1-year vs 2-year layout)
-    other_year = census_cfg.get("other_year", None)
 
+def _infer_other_year(ctx: CensusContext, a1: pd.DataFrame) -> int | None:
+    other_year = ctx.inputs.other_year
+    if other_year is not None:
+        return other_year
+
+    # Infer from table width when config not provided
+    if a1.shape[1] == 6:
+        return ctx.inputs.census_year - 10  # legacy default
+    if a1.shape[1] == 3:
+        return None
+
+    raise ValueError(
+        f"A1 unexpected number of columns after cleanup: {a1.shape[1]}. "
+        "Expected 3 (single year) or 6 (two years)."
+    )
+
+
+def _a1_column_titles(census_year: int, other_year: int | None) -> list[str]:
     if other_year is None:
-        if a1.shape[1] == 6:
-            other_year = census_year - 10  # legacy default (e.g., 2018/2008)
-        elif a1.shape[1] == 3:
-            other_year = None
-        else:
-            raise ValueError(
-                f"A1 unexpected number of columns after cleanup: {a1.shape[1]}. "
-                f"Expected 3 (single year) or 6 (two years)."
-            )
+        return [f"Total_{census_year}", f"Male_{census_year}", f"Female_{census_year}"]
 
-    if other_year is None:
-        column_titles = [f"Total_{census_year}", f"Male_{census_year}", f"Female_{census_year}"]
-    else:
-        column_titles = [
-            f"Total_{census_year}",
-            f"Male_{census_year}",
-            f"Female_{census_year}",
-            f"Total_{other_year}",
-            f"Male_{other_year}",
-            f"Female_{other_year}",
-        ]
+    return [
+        f"Total_{census_year}",
+        f"Male_{census_year}",
+        f"Female_{census_year}",
+        f"Total_{other_year}",
+        f"Male_{other_year}",
+        f"Female_{other_year}",
+    ]
 
-    if a1.shape[1] != len(column_titles):
-        raise ValueError(
-            f"A1 unexpected number of columns after cleanup: got "
-            f"{a1.shape[1]} expected {len(column_titles)}. "
-            "Check sheet layout / cleanup steps and/or set census.other_year."
-        )
 
-    a1.columns = column_titles
-    a1 = a1.dropna(axis=0)
-    a1.index = [str(name).strip() for name in list(a1.index)]
-
-    # Coerce numeric (robust to commas/nbsp)
-    a1[column_titles] = (
-        a1[column_titles]
+def _coerce_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    out = df.copy()
+    out[cols] = (
+        out[cols]
         .apply(
             lambda s: (
                 s.astype(str)
@@ -148,12 +200,17 @@ def main() -> None:
         )
         .apply(pd.to_numeric, errors="coerce")
     )
-    if a1[column_titles].isna().any().any():
-        bad = a1.loc[a1[column_titles].isna().any(axis=1), column_titles].head(10)
+    if out[cols].isna().any().any():
+        bad = out.loc[out[cols].isna().any(axis=1), cols].head(10)
         raise ValueError(f"A1 contains non-numeric values after coercion. Example rows:\n{bad}")
+    return out
 
-    # Canonical districts list should be AFTER you extract district rows (not regions/national)
-    # First capture region + national totals from A1 as-is:
+
+def _extract_region_and_national(
+    a1: pd.DataFrame,
+    region_names: list[str],
+    national_label: str,
+) -> tuple[pd.DataFrame, pd.Series]:
     try:
         region_totals = a1.loc[region_names].copy()
     except KeyError as e:
@@ -166,20 +223,75 @@ def main() -> None:
     except KeyError as e:
         raise KeyError(f"national_label '{national_label}' not found in A1 index") from e
 
-    # Organize regional and national totals nicely
-    a1 = a1.copy()
-    a1["Region"] = None
-    a1.loc[region_names, "Region"] = region_names
-    a1["Region"] = a1["Region"].ffill()
+    return region_totals, national_total
 
-    # Drop region rows; drop national row
-    a1 = a1.drop(index=region_names, errors="ignore")
-    a1 = a1.drop(index=[national_label], errors="ignore")
 
-    # Checks (same as your intent)
-    assert a1.drop(columns="Region").sum().astype(int).equals(national_total.astype(int))
+def _attach_region_and_filter_district_rows(
+    a1: pd.DataFrame,
+    region_names: list[str],
+    national_label: str,
+) -> pd.DataFrame:
+    out = a1.copy()
+    out["Region"] = None
+    out.loc[region_names, "Region"] = region_names
+    out["Region"] = out["Region"].ffill()
+
+    # Drop region rows and national row, leaving districts only
+    out = out.drop(index=region_names, errors="ignore")
+    out = out.drop(index=[national_label], errors="ignore")
+    return out
+
+
+def _build_district_nums(a1_districts: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        data={
+            "Region": a1_districts["Region"],
+            "District_Num": np.arange(len(a1_districts["Region"])),
+        },
+        index=a1_districts.index,
+    )
+
+
+def _load_a1_and_district_nums(
+    ctx: CensusContext,
+    workbook: dict[str, pd.DataFrame],
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    a1_raw = workbook[ctx.inputs.pop_totals_sheet]
+    region_names = workbook['regions']["Region"].str.strip().tolist()
+    dist_names = workbook['dist_name_fixes']
+
+    a1 = _cleanup_a1(a1_raw)
+    other_year = _infer_other_year(ctx, a1)
+    titles = _a1_column_titles(ctx.inputs.census_year, other_year)
+
+    if a1.shape[1] != len(titles):
+        raise ValueError(
+            "A1 unexpected number of columns after cleanup: "
+            f"got {a1.shape[1]} expected {len(titles)}. "
+            "Check sheet layout / cleanup steps and/or set census.other_year."
+        )
+
+    a1.columns = titles
+    a1 = a1.dropna(axis=0)
+    a1.index = [str(name).strip() for name in list(a1.index)]
+    a1 = _coerce_numeric(a1, titles)
+
+    region_totals, national_total = _extract_region_and_national(
+        a1=a1,
+        region_names=region_names,
+        national_label=ctx.inputs.national_label,
+    )
+
+    a1_districts = _attach_region_and_filter_district_rows(
+        a1=a1,
+        region_names=region_names,
+        national_label=ctx.inputs.national_label,
+    )
+
+    # Validate sums match region/national totals
+    assert a1_districts.drop(columns="Region").sum().astype(int).equals(national_total.astype(int))
     assert (
-        a1.groupby("Region")
+        a1_districts.groupby("Region")
         .sum(numeric_only=True)
         .astype(int)
         .eq(region_totals.astype(int))
@@ -187,119 +299,133 @@ def main() -> None:
         .all()
     )
 
+    # Rename districts if mapping provided
     if not dist_names.empty:
-        a1 = rename_index_from_file(
-            a1,
+        a1_districts = rename_index_from_file(
+            a1_districts,
             dist_names,
-            canonical_districts=a1.index,  # optional
-            strict=False,  # keep False to mimic original behavior (no validation)
+            canonical_districts=a1_districts.index,  # optional
+            strict=False,
         )
 
-    canonical_districts = list(a1.index)
-    district_names = canonical_districts
+    district_nums = _build_district_nums(a1_districts)
+    district_names = list(a1_districts.index)
+    return a1_districts, district_nums, district_names
 
-    # District numbers follow A1 order
-    district_nums = pd.DataFrame(
-        data={"Region": a1["Region"], "District_Num": np.arange(len(a1["Region"]))},
-        index=a1.index,
-    )
 
-    # -----------------------------------------
-    # A7: age breakdown for each district
-    # -----------------------------------------
-    # A7 read
+def _load_a7_age_distribution(
+    ctx: CensusContext,
+    workbook: dict[str, pd.DataFrame],
+    district_nums: pd.DataFrame,
+) -> pd.DataFrame:
+    dist_names = workbook['dist_name_fixes']
+    patches_df = workbook['cell_patches']
+
     a7 = pd.read_excel(
-        workingfile_popsizes,
-        sheet_name=age_dist,
+        ctx.inputs.workingfile_popsizes,
+        sheet_name=ctx.inputs.age_dist_sheet,
         header=1,
         index_col=0,
     )
     a7.index = a7.index.str.strip()
 
     if not patches_df.empty:
-        a7 = apply_cell_patches(a7, patches_df, sheet=age_dist, strict=True)
+        a7 = apply_cell_patches(a7, patches_df, sheet=ctx.inputs.age_dist_sheet, strict=True)
 
-    # Old logic: drop NA + numeric
-    a7 = a7.dropna()
-    a7 = a7.astype(int)
+    a7 = a7.dropna().astype(int)
 
     if not dist_names.empty:
         a7 = rename_index_from_file(
             a7,
             dist_names,
-            canonical_districts=district_nums.index,  # optional
-            strict=False,  # keep False to mimic original behavior (no validation)
+            canonical_districts=district_nums.index,
+            strict=False,
         )
 
-    # Extract districts present in A1 (canonical list)
+    # Keep only districts that are in A1 canonical list
     extract = a7.loc[a7.index.isin(district_nums.index)].copy()
-    extract.drop(columns=["Total"], inplace=True)
+    extract = extract.drop(columns=["Total"])
 
-    # Checks
     assert set(extract.index) == set(district_nums.index)
-    assert len(extract) == len(district_names)
-    assert extract.sum(axis=1).astype(int).eq(a1[f"Total_{census_year}"]).all()
+    return extract
 
-    # Fractions by age group
-    frac_in_each_age_grp = extract.div(extract.sum(axis=1), axis=0)
-    assert (frac_in_each_age_grp.sum(axis=1).astype("float32") == 1.0).all()
 
-    # -----------------------------------------
-    # Build district x age x sex breakdown
-    # -----------------------------------------
-    males = frac_in_each_age_grp.mul(a1[f"Male_{census_year}"], axis=0)
+def _age_group_fractions(extract: pd.DataFrame) -> pd.DataFrame:
+    frac = extract.div(extract.sum(axis=1), axis=0)
+    assert (frac.sum(axis=1).astype("float32") == 1.0).all()
+    return frac
+
+
+def _build_long_age_sex_table(
+    ctx: CensusContext,
+    a1_districts: pd.DataFrame,
+    frac_in_each_age_grp: pd.DataFrame,
+    calendar_period_lookup: Mapping[int, str],
+) -> pd.DataFrame:
+    year = ctx.inputs.census_year
+
+    males = frac_in_each_age_grp.mul(a1_districts[f"Male_{year}"], axis=0)
     assert (
-        males.sum(axis=1).astype("float32") == a1[f"Male_{census_year}"].astype("float32")
+        males.sum(axis=1).astype("float32") == a1_districts[f"Male_{year}"].astype("float32")
     ).all()
     males["district"] = males.index
     males_melt = males.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     males_melt["sex"] = "M"
-    males_melt = males_melt.merge(a1[["Region"]], left_on="district", right_index=True)
+    males_melt = males_melt.merge(a1_districts[["Region"]], left_on="district", right_index=True)
 
-    females = frac_in_each_age_grp.mul(a1[f"Female_{census_year}"], axis=0)
+    females = frac_in_each_age_grp.mul(a1_districts[f"Female_{year}"], axis=0)
     assert (
-        females.sum(axis=1).astype("float32") == a1[f"Female_{census_year}"].astype("float32")
+        females.sum(axis=1).astype("float32") == a1_districts[f"Female_{year}"].astype("float32")
     ).all()
     females["district"] = females.index
     females_melt = females.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     females_melt["sex"] = "F"
-    females_melt = females_melt.merge(a1[["Region"]], left_on="district", right_index=True)
+    females_melt = females_melt.merge(
+        a1_districts[["Region"]], left_on="district", right_index=True
+    )
 
-    # Long-format
     table = pd.concat([males_melt, females_melt], ignore_index=True)
     table["number"] = table["number"].astype(float)
-    table.rename(
+    table = table.rename(
         columns={
             "district": "District",
             "age_grp": "Age_Grp_Special",
             "sex": "Sex",
             "number": "Count",
-        },
-        inplace=True,
+        }
     )
+
     table["Age_Grp_Special"] = table["Age_Grp_Special"].replace({"Less than 1 Year": "0-1"})
-    table["Variant"] = f"Census_{census_year}"
-    table["Year"] = census_year
+    table["Variant"] = f"Census_{year}"
+    table["Year"] = year
     table["Period"] = table["Year"].map(calendar_period_lookup)
 
-    # Collapse 0-1 and 1-4 into 0-4
-    table["Age_Grp"] = table["Age_Grp_Special"].replace({"0-1": "0-4", "1-4": "0-4"})
-    table["Count_By_Age_Grp"] = table.groupby(by=["Age_Grp", "District", "Sex"])["Count"].transform(
-        "sum"
-    )
-    table = table.drop_duplicates(subset=["Age_Grp", "District", "Sex"])
-    table = table.rename(columns={"Count_By_Age_Grp": "Count", "Count": "Count_By_Age_Grp_Special"})
+    return table
 
-    # Merge District_Num
-    table = table.merge(
+
+def _collapse_special_age_groups(table: pd.DataFrame) -> pd.DataFrame:
+    out = table.copy()
+
+    # Collapse 0-1 and 1-4 into 0-4
+    out["Age_Grp"] = out["Age_Grp_Special"].replace({"0-1": "0-4", "1-4": "0-4"})
+    out["Count_By_Age_Grp"] = out.groupby(["Age_Grp", "District", "Sex"])["Count"].transform("sum")
+    out = out.drop_duplicates(subset=["Age_Grp", "District", "Sex"])
+    out = out.rename(columns={"Count_By_Age_Grp": "Count", "Count": "Count_By_Age_Grp_Special"})
+    return out
+
+
+def _merge_district_nums(table: pd.DataFrame, district_nums: pd.DataFrame) -> pd.DataFrame:
+    out = table.merge(
         district_nums[["District_Num"]], left_on=["District"], right_index=True, how="left"
     )
     assert 0 == len(
-        set(district_nums["District_Num"]).difference(set(pd.unique(table["District_Num"])))
+        set(district_nums["District_Num"]).difference(set(pd.unique(out["District_Num"])))
     )
+    return out
 
-    # Re-order columns
-    table = table[
+
+def _reorder_and_write(ctx: CensusContext, table: pd.DataFrame) -> Path:
+    ordered = table[
         [
             "Variant",
             "District",
@@ -313,10 +439,55 @@ def main() -> None:
         ]
     ]
 
-    # Save resource-file
-    out_path = resources_dir / f"ResourceFile_PopulationSize_{census_year}Census.csv"
-    table.to_csv(out_path, index=False)
+    out_path = (
+        ctx.outputs.resources_dir
+        / f"ResourceFile_PopulationSize_{ctx.inputs.census_year}Census.csv"
+    )
+    ordered.to_csv(out_path, index=False)
+    return out_path
 
+
+def main() -> None:
+    """
+    Main function to process and create a census resource file.
+
+    This function orchestrates the workflow of loading configuration, parsing
+    context, extracting data, and processing it to create a comprehensive
+    census resource file. It performs consistency checks, applies transformations
+    on the data, and writes the final resource file to an output path.
+    The function utilizes several helper functions to achieve specific tasks.
+
+    Raises:
+        AssertionError: When the length of the extracted data does not match
+            the district names count or when the sums of the extracted data
+            do not align with the total census data for the specified year.
+    """
+    cfg = load_cfg()
+    ctx = _parse_context(cfg)
+
+    calendar_period_lookup = make_calendar_period_lookup()
+
+    workbook = _load_workbook(ctx)
+    a1_districts, district_nums, _district_names = _load_a1_and_district_nums(ctx, workbook)
+
+    extract = _load_a7_age_distribution(ctx, workbook, district_nums)
+
+    # Checks tying A7 to A1 totals (kept from original)
+    assert len(extract) == len(_district_names)
+    assert extract.sum(axis=1).astype(int).eq(a1_districts[f"Total_{ctx.inputs.census_year}"]).all()
+
+    frac_in_each_age_grp = _age_group_fractions(extract)
+
+    table = _build_long_age_sex_table(
+        ctx=ctx,
+        a1_districts=a1_districts,
+        frac_in_each_age_grp=frac_in_each_age_grp,
+        calendar_period_lookup=calendar_period_lookup,
+    )
+    table = _collapse_special_age_groups(table)
+    table = _merge_district_nums(table, district_nums)
+
+    out_path = _reorder_and_write(ctx, table)
     print(f"[OK] Wrote census resource file to: {out_path}")
 
 

@@ -50,12 +50,12 @@ def main() -> None:
     parser.add_argument("--country", required=True, help="Country code, e.g. mw or tz")
     parser.add_argument(
         "--reports-dir",
-        default="reports",
+        default="outputs/reports",
         help="Where to write generated report outputs (default: reports/)",
     )
     parser.add_argument(
         "--resources-dir",
-        default="resources",
+        default="outputs/resources",
         help="Base resources folder used by your existing scripts (default: resources/)",
     )
     parser.add_argument(
@@ -67,9 +67,12 @@ def main() -> None:
 
     # 1) Build resources using your existing scripts (pass-through unknown args if
     #    you already use them)
-    _run([sys.executable, "scripts/census.py", "--country", args.country, *unknown])
-    _run([sys.executable, "scripts/dhs.py", "--country", args.country, *unknown])
-    _run([sys.executable, "scripts/wpp.py", "--country", args.country, *unknown])
+    _run([sys.executable, "src/tlo_data_pipeline/demography/census.py", "--country",
+          args.country, *unknown])
+    _run([sys.executable, "src/tlo_data_pipeline/demography/dhs.py", "--country",
+          args.country, *unknown])
+    _run([sys.executable, "src/tlo_data_pipeline/demography/wpp.py", "--country",
+          args.country, *unknown])
 
     if args.skip_report:
         print("\n[ok] Resources built; report skipped.")
@@ -80,7 +83,7 @@ def main() -> None:
         [
             sys.executable,
             "-m",
-            "reporting.tlo_demography_pipeline.build_report",
+            "src.tlo_data_pipeline.demography.reporting.build_report",
             "--country",
             args.country,
             "--resources-dir",

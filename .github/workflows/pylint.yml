@@ -28,4 +28,4 @@ jobs:
 
       - name: Analyse code with pylint
         run: |
-          PYTHONPATH=src pylint $(git ls-files '*.py')
+          pylint $(git ls-files '*.py')

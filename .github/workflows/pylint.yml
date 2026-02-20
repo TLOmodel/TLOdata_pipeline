@@ -26,11 +26,6 @@ jobs:
         run: |
           black --check $(git ls-files '*.py')
 
-      - name: Debug import path
-        run: |
-          python -c "import sys; print('\n'.join(sys.path))"
-          python -c "import tlo_data_pipeline; print('tlo_data_pipeline OK')"
-
       - name: Analyse code with pylint
         run: |
           PYTHONPATH=src pylint $(git ls-files '*.py')

@@ -9,7 +9,7 @@ coverage for the reliability and correctness of the checks implemented in the pi
 
 import pandas as pd
 
-from src.tlo.demography.checks import (
+from tlo.methods.checks import (
     check_age_range,
     check_no_negative_counts,
     check_sex_values,

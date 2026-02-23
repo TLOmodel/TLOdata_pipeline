@@ -18,8 +18,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from tlo.demography.fixes import apply_cell_patches, rename_index_from_file
-from tlo.demography.utils import load_cfg, make_calendar_period_lookup
+from tlo.methods.fixes import apply_cell_patches, rename_index_from_file
+from tlo.methods.utils import load_cfg, make_calendar_period_lookup
 
 
 def ensure_dir(p: Path) -> None:

@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from tlo.demography.utils import load_cfg
+from tlo.methods.utils import load_cfg
 
 
 def _coerce_year_series(s: pd.Series) -> pd.Series:

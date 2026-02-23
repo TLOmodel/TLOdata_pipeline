@@ -10,9 +10,10 @@ WPP demographic processing:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -114,7 +115,7 @@ class WPPContext:
 
     wpp: Mapping[str, Any]
     paths: WPPPaths
-    reader: "WPPReader"
+    reader: WPPReader
     reader_cfg: WPPReaderConfig
     init: WPPInitConfig
 

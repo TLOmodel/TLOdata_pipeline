@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
@@ -69,7 +69,7 @@ def load_cfg(path: str | Path = "config/pipeline_setup.yaml") -> dict[str, Any]:
     return resolve_templates(cfg)
 
 
-def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> Dict[int, str]:
+def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> dict[int, str]:
     """Create age-range categories and a dictionary that will map all whole years to
     age-range categories
 

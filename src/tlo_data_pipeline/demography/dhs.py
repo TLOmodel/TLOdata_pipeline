@@ -20,6 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+
 from tlo_data_pipeline.demography.utils import load_cfg
 
 

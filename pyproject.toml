@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tlo-data-pipeline"
+version = "0.1.0"
+description = "TLO data pipeline framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "Emmanuel Mnjowe" }
+]
+
+# pipeline dependencies
+dependencies = [
+  "pandas>=2.1",
+  "numpy>=1.24",
+  "pyyaml>=6.0",
+  "openpyxl>=3.1",
+  "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+]
+dev = [
+  "ruff>=0.4",
+  "black>=24.3",
+  "pylint>=3.0",
+  "mypy>=1.8",
+  "types-PyYAML",
+]
+
+docs = [
+  "mkdocs>=1.5",
+  "mkdocs-material>=9.5",
+]
+
+[project.scripts]
+tlo-pipeline = "tlo_data_pipeline.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tlo_data_pipeline*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+  ".git",
+  ".idea",
+  "outputs",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]  # let black/line-length handle long lines
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+extend-exclude = '''
+(
+  \.git
+  | \.idea
+  | outputs
+)
+'''
+
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+ignore_missing_imports = true

@@ -1,0 +1,73 @@
+country_code: country_code
+country_name: country_name
+wpp_name: country_wpp_name
+
+# Centralised path roots (so only country_code changes folder targeting)
+paths:
+  input_dir: "inputs/demography"
+  resources_dir: "outputs/resources/"
+  reports_dir: "outputs/reports/"
+
+census:
+  year: 2012
+  population_tables: "{paths.input_dir}/census/country_census_template.xlsx"
+  pop_totals: "pop_totals"
+  age_dist: "age_distribution"
+  regions: "regions"
+  dist_name_fixes: "dist_name_fixes"
+  cell_patches: "cell_patches"
+
+  national_label: "{country_name}"
+
+wpp:
+  country_label: "{wpp_name}"
+  header_row: 16
+
+  # Annual pop (single-year ages)
+  enable_annual_pop: true
+  init_population_year: 2010
+
+  pop_annual_male_file: "{paths.input_dir}/wpp/WPP2019_INT_F03_2_POPULATION_BY_AGE_ANNUAL_MALE.xlsx"
+  pop_annual_female_file: "{paths.input_dir}/wpp/WPP2019_INT_F03_3_POPULATION_BY_AGE_ANNUAL_FEMALE.xlsx"
+  pop_annual_sheets: ["ESTIMATES", "MEDIUM VARIANT"]
+  pop_annual_multiplier: 1000
+  pop_annual_age_cols_slice_end: 103
+
+  # Pop by 5-year age groups (F07)
+  pop_agegrp_male: "{paths.input_dir}/wpp/WPP2019_POP_F07_2_POPULATION_BY_AGE_MALE.xlsx"
+  pop_agegrp_female: "{paths.input_dir}/wpp/WPP2019_POP_F07_3_POPULATION_BY_AGE_FEMALE.xlsx"
+  pop_agegrp_sheets: ["ESTIMATES", "LOW VARIANT", "MEDIUM VARIANT", "HIGH VARIANT"]
+  pop_agegrp_multiplier: 1000
+
+  # Total births + sex ratio + ASFR
+  total_births_file: "{paths.input_dir}/wpp/WPP2019_FERT_F01_BIRTHS_BOTH_SEXES.xlsx"
+  sex_ratio_file: "{paths.input_dir}/wpp/WPP2019_FERT_F02_SEX_RATIO_AT_BIRTH.xlsx"
+  asfr_file: "{paths.input_dir}/wpp/WPP2019_FERT_F07_AGE_SPECIFIC_FERTILITY.xlsx"
+  fert_sheets_all: ["ESTIMATES", "LOW VARIANT", "MEDIUM VARIANT", "HIGH VARIANT"]
+  fert_sheets_est_med: ["ESTIMATES", "MEDIUM VARIANT"]
+
+  # Deaths by age
+  deaths_male_file: "{paths.input_dir}/wpp/WPP2019_MORT_F04_2_DEATHS_BY_AGE_MALE.xlsx"
+  deaths_female_file: "{paths.input_dir}/wpp/WPP2019_MORT_F04_3_DEATHS_BY_AGE_FEMALE.xlsx"
+  deaths_sheets: ["ESTIMATES", "LOW VARIANT", "MEDIUM VARIANT", "HIGH VARIANT"]
+  deaths_multiplier: 1000
+
+  # Abridged life table
+  lifetable_male_file: "{paths.input_dir}/wpp/WPP2019_MORT_F17_2_ABRIDGED_LIFE_TABLE_MALE.xlsx"
+  lifetable_female_file: "{paths.input_dir}/wpp/WPP2019_MORT_F17_3_ABRIDGED_LIFE_TABLE_FEMALE.xlsx"
+  lifetable_sheets: ["ESTIMATES", "MEDIUM 2020-2050", "MEDIUM 2050-2100"]
+  lifetable_usecols: "B,C,H,I,J,K"
+
+dhs:
+  file: "{paths.input_dir}/dhs/dhs_data.xlsx"
+  sheet_asfr: "ASFR"
+  sheet_u5: "UNDER_5_MORT"
+  u5_header: 1
+
+outputs:
+  resources_dir: "{paths.resources_dir}"
+  reports_dir: "{paths.reports_dir}"
+
+model:
+  init_year: 2010
+  max_age: 120

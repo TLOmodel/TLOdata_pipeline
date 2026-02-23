@@ -1,0 +1,12 @@
+**/__pycache__/
+.idea/
+.DS_Store
+# Ignore everything under inputs and outputs
+inputs/*
+outputs/*
+
+# But keep README files (and their directories)
+!inputs/README.md
+!outputs/README.md
+!inputs/**/README.md
+!outputs/**/README.md

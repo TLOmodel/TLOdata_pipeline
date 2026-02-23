@@ -1,4 +1,4 @@
-# src/tlo/paths.py
+# src/pipeline/paths.py
 """
 Utilities for handling consistent directory and file path management
 within the project structure.
@@ -18,7 +18,7 @@ def project_root() -> Path:
     """
     Resolve project root assuming standard layout:
     project_root/
-      src/tlo/paths.py
+      src/pipeline/paths.py
     """
     return Path(__file__).resolve().parents[2]
 

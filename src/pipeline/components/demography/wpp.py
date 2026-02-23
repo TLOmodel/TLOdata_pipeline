@@ -18,12 +18,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from tlo.methods._io import (
+from pipeline.components.common._io import (
     WPPReader,
     ensure_dir,
     reformat_date_period_for_wpp,
 )
-from tlo.methods.utils import (
+from pipeline.components.utils import (
     create_age_range_lookup,
     load_cfg,
     make_calendar_period_lookup,

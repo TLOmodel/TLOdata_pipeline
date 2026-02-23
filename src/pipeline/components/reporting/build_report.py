@@ -15,8 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from tlo.methods.artifacts import discover_resources, load_all
-from tlo.methods.checks import run_all_checks
+from pipeline.components.common.artifacts import discover_resources, load_all
+from pipeline.components.common.checks import run_all_checks
 
 
 def _git_hash() -> str | None:

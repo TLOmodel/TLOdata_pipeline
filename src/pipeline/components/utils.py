@@ -3,7 +3,7 @@
 This module provides functionality to load YAML configuration files and resolve
 placeholders within the configuration dictionary using template resolution.
 
-The module defines methods to fetch nested configuration values via dotted keys,
+The module defines components to fetch nested configuration values via dotted keys,
 resolve placeholders in configuration files, and load configuration files
 from the filesystem while handling template substitutions.
 """

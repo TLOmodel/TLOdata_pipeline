@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from tlo.methods.utils import load_cfg
+from pipeline.components.utils import load_cfg
 
 
 def _coerce_year_series(s: pd.Series) -> pd.Series:

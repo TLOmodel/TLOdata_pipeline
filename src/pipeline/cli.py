@@ -24,7 +24,7 @@ def main() -> None:
     Raises:
         SystemExit: Raised when invalid arguments are provided or CLI invocation is incorrect.
     """
-    parser = argparse.ArgumentParser(prog="tlo-pipeline")
+    parser = argparse.ArgumentParser(prog="pipeline-pipeline")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("version", help="Print version information")
@@ -32,4 +32,4 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.cmd == "version":
-        print("tlo-data-pipeline 0.1.0")
+        print("pipeline-data-pipeline 0.1.0")

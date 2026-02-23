@@ -18,8 +18,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from tlo.methods.fixes import apply_cell_patches, rename_index_from_file
-from tlo.methods.utils import load_cfg, make_calendar_period_lookup
+from pipeline.components.common.fixes import apply_cell_patches, rename_index_from_file
+from pipeline.components.utils import load_cfg, make_calendar_period_lookup
 
 
 def ensure_dir(p: Path) -> None:

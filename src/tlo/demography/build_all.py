@@ -70,7 +70,7 @@ def main() -> None:
     _run(
         [
             sys.executable,
-            "src/tlo_data_pipeline/demography/census.py",
+            "src/tlo/demography/census.py",
             "--country",
             args.country,
             *unknown,
@@ -79,7 +79,7 @@ def main() -> None:
     _run(
         [
             sys.executable,
-            "src/tlo_data_pipeline/demography/dhs.py",
+            "src/tlo/demography/dhs.py",
             "--country",
             args.country,
             *unknown,
@@ -88,7 +88,7 @@ def main() -> None:
     _run(
         [
             sys.executable,
-            "src/tlo_data_pipeline/demography/wpp.py",
+            "src/tlo/demography/wpp.py",
             "--country",
             args.country,
             *unknown,
@@ -104,7 +104,7 @@ def main() -> None:
         [
             sys.executable,
             "-m",
-            "src.tlo_data_pipeline.demography.reporting.build_report",
+            "src.tlo.demography.reporting.build_report",
             "--country",
             args.country,
             "--resources-dir",

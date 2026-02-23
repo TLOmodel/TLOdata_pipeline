@@ -18,12 +18,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from tlo_data_pipeline.demography.demography_io import (
+from tlo.demography.demography_io import (
     WPPReader,
     ensure_dir,
     reformat_date_period_for_wpp,
 )
-from tlo_data_pipeline.demography.utils import (
+from tlo.demography.utils import (
     create_age_range_lookup,
     load_cfg,
     make_calendar_period_lookup,

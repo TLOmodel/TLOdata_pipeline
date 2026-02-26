@@ -21,9 +21,10 @@ This module defines a WPPBuilder (no main()).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -75,8 +76,8 @@ class WPPConfig:
     # Annual pop (optional)
     enable_annual_pop: bool = True
     init_population_year: int = 2010
-    pop_annual_male_file: Optional[Path] = None
-    pop_annual_female_file: Optional[Path] = None
+    pop_annual_male_file: Path | None = None
+    pop_annual_female_file: Path | None = None
     pop_annual_sheets: list[str] = None  # type: ignore[assignment]
     pop_annual_multiplier: float = 1000.0
     pop_annual_age_cols_slice_end: int = 103
@@ -86,7 +87,7 @@ class WPPConfig:
     max_age: int = 120
 
     @staticmethod
-    def from_ctx(ctx: BuildContext) -> "WPPConfig":
+    def from_ctx(ctx: BuildContext) -> WPPConfig:
         wpp = ctx.cfg["wpp"]
 
         def _p(key: str) -> Path:

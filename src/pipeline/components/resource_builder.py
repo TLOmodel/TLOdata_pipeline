@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Mapping, Optional, Sequence
+from typing import Any
 
 import pandas as pd
 
@@ -40,8 +41,8 @@ class ResourceArtifact:
 
     name: str
     path: Path
-    rows: Optional[int] = None
-    cols: Optional[int] = None
+    rows: int | None = None
+    cols: int | None = None
 
 
 class ResourceBuilder:
@@ -68,7 +69,7 @@ class ResourceBuilder:
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def run(self) -> List[ResourceArtifact]:
+    def run(self) -> list[ResourceArtifact]:
         self.preflight()
 
         raw = self.load_data()
@@ -86,7 +87,7 @@ class ResourceBuilder:
         """Ensure output directory exists and required inputs are present."""
         self.ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
-        missing: List[str] = []
+        missing: list[str] = []
         for rel in self.REQUIRED_INPUTS:
             p = self.ctx.raw_dir / rel
             if not p.exists():
@@ -117,8 +118,8 @@ class ResourceBuilder:
     # Base implementations
     # ------------------------------------------------------------------
 
-    def write(self, outputs: Mapping[str, pd.DataFrame]) -> List[ResourceArtifact]:
-        artifacts: List[ResourceArtifact] = []
+    def write(self, outputs: Mapping[str, pd.DataFrame]) -> list[ResourceArtifact]:
+        artifacts: list[ResourceArtifact] = []
 
         for name in sorted(outputs.keys()):
             df = outputs[name]

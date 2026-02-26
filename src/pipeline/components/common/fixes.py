@@ -17,9 +17,9 @@ Classes:
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import Any
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 

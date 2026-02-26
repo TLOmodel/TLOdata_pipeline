@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import yaml
 
@@ -100,7 +100,7 @@ def load_cfg(path: str | Path = "config/pipeline_setup.yaml") -> dict[str, Any]:
 # ---------------------------------------------------------------------
 # Path resolution helpers (ResourceBuilder)
 # ---------------------------------------------------------------------
-def resolve_input_path(ctx: BuildContext, value: Union[str, Path]) -> Path:
+def resolve_input_path(ctx: BuildContext, value: str | Path) -> Path:
     """
     Resolve a config-defined input path.
 

@@ -6,9 +6,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from pipeline.components.resource_builder import BuildContext
 from pipeline.components.demography import wpp as wpp_mod
 from pipeline.components.demography.wpp import WPPBuilder
+from pipeline.components.resource_builder import BuildContext
 
 
 def _make_pop_agegrp_df() -> pd.DataFrame:

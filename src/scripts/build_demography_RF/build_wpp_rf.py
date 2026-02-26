@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from pipeline.components.demography.wpp import WPPBuilder
 from pipeline.components.resource_builder import BuildContext
 from pipeline.components.utils import load_cfg
-from pipeline.components.demography.wpp import WPPBuilder
 
 
 def main() -> None:

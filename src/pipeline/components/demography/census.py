@@ -18,14 +18,14 @@ Config contract (cfg["census"]):
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder
 from pipeline.components.common.fixes import apply_cell_patches, rename_index_from_file
+from pipeline.components.resource_builder import BuildContext, ResourceBuilder
 from pipeline.components.utils import make_calendar_period_lookup, resolve_input_path
 
 

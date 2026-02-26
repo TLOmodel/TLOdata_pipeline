@@ -6,8 +6,8 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from pipeline.components.resource_builder import BuildContext
 from pipeline.components.demography.census import CensusBuilder
+from pipeline.components.resource_builder import BuildContext
 
 
 def _fake_census_workbook(census_year: int) -> dict[str, pd.DataFrame]:

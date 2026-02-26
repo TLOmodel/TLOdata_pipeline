@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from pipeline.components.resource_builder import BuildContext
 from pipeline.components.demography.census import CensusBuilder
+from pipeline.components.resource_builder import BuildContext
 from pipeline.components.utils import load_cfg
 
 

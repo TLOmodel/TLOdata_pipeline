@@ -13,13 +13,14 @@ Behavior:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 import pandas as pd
 
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder, ResourceArtifact
+from pipeline.components.resource_builder import BuildContext, ResourceArtifact, ResourceBuilder
 from pipeline.components.utils import resolve_input_path
 
 
@@ -34,7 +35,7 @@ class DHSConfig:
     u5_header: int = 1
 
     @staticmethod
-    def from_ctx(ctx: BuildContext) -> Optional["DHSConfig"]:
+    def from_ctx(ctx: BuildContext) -> DHSConfig | None:
         if "dhs" not in ctx.cfg:
             return None
 

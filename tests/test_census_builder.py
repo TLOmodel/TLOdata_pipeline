@@ -61,7 +61,9 @@ def _fake_census_workbook(census_year: int) -> dict[str, pd.DataFrame]:
 
 
 @pytest.mark.parametrize("year", [2012])
-def test_census_builder_writes_expected_output_and_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, year: int) -> None:
+def test_census_builder_writes_expected_output_and_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, year: int
+) -> None:
     # Arrange: fake workbook file exists
     raw_dir = tmp_path / "inputs" / "demography"
     raw_dir.mkdir(parents=True)
@@ -121,6 +123,16 @@ def test_census_builder_writes_expected_output_and_manifest(tmp_path: Path, monk
     assert manifest.exists()
 
     df = pd.read_csv(out_path)
-    required_cols = {"Variant", "District", "District_Num", "Region", "Year", "Period", "Age_Grp", "Sex", "Count"}
+    required_cols = {
+        "Variant",
+        "District",
+        "District_Num",
+        "Region",
+        "Year",
+        "Period",
+        "Age_Grp",
+        "Sex",
+        "Count",
+    }
     assert required_cols.issubset(df.columns)
     assert not df.empty

@@ -57,7 +57,9 @@ class CensusBuilder(ResourceBuilder):
 
         # National label (template-friendly)
         nat_raw = str(census_cfg.get("national_label", "{country_name}"))
-        self.national_label = nat_raw.format(country_name=self.ctx.cfg.get("country_name", "National"))
+        self.national_label = nat_raw.format(
+            country_name=self.ctx.cfg.get("country_name", "National")
+        )
 
     # ------------------------------------------------------------------
     # lifecycle
@@ -162,9 +164,11 @@ class CensusBuilder(ResourceBuilder):
         super().validate(outputs)
 
         if len(outputs) != 1:
-            raise AssertionError(f"Expected exactly 1 output for census builder, got {len(outputs)}")
+            raise AssertionError(
+                f"Expected exactly 1 output for census builder, got {len(outputs)}"
+            )
 
-        (name, df) = next(iter(outputs.items()))
+        name, df = next(iter(outputs.items()))
 
         required_cols = [
             "Variant",
@@ -253,7 +257,9 @@ def _coerce_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     )
     if out[cols].isna().any().any():
         bad = out.loc[out[cols].isna().any(axis=1), cols].head(10)
-        raise ValueError(f"total_pop contains non-numeric values after coercion. Example rows:\n{bad}")
+        raise ValueError(
+            f"total_pop contains non-numeric values after coercion. Example rows:\n{bad}"
+        )
     return out
 
 
@@ -350,8 +356,7 @@ def _process_total_pop(
     want_nat = national_total.astype(int)
     if not got_nat.equals(want_nat):
         raise AssertionError(
-            "District sums do not match national total.\n"
-            f"got:\n{got_nat}\n\nwant:\n{want_nat}"
+            "District sums do not match national total.\n" f"got:\n{got_nat}\n\nwant:\n{want_nat}"
         )
 
     # Validate region groupby sums match region totals
@@ -392,7 +397,9 @@ def _process_age_distribution(
     age_distr.index = age_distr.index.astype(str).str.strip()
 
     if cell_patches_df is not None and not cell_patches_df.empty:
-        age_distr = apply_cell_patches(age_distr, cell_patches_df, sheet="age_distribution", strict=True)
+        age_distr = apply_cell_patches(
+            age_distr, cell_patches_df, sheet="age_distribution", strict=True
+        )
 
     age_distr = age_distr.dropna().astype(int)
 
@@ -447,7 +454,9 @@ def _build_long_age_sex_table(
     males["district"] = males.index
     males_melt = males.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     males_melt["sex"] = "M"
-    males_melt = males_melt.merge(total_pop_districts[["Region"]], left_on="district", right_index=True)
+    males_melt = males_melt.merge(
+        total_pop_districts[["Region"]], left_on="district", right_index=True
+    )
 
     females = frac_in_each_age_grp.mul(total_pop_districts[f"Female_{year}"], axis=0)
     fem_tot = females.sum(axis=1).astype(float)
@@ -459,7 +468,9 @@ def _build_long_age_sex_table(
     females["district"] = females.index
     females_melt = females.melt(id_vars=["district"], var_name="age_grp", value_name="number")
     females_melt["sex"] = "F"
-    females_melt = females_melt.merge(total_pop_districts[["Region"]], left_on="district", right_index=True)
+    females_melt = females_melt.merge(
+        total_pop_districts[["Region"]], left_on="district", right_index=True
+    )
 
     table = pd.concat([males_melt, females_melt], ignore_index=True)
     table["number"] = table["number"].astype(float)
@@ -493,7 +504,9 @@ def _collapse_special_age_groups(table: pd.DataFrame) -> pd.DataFrame:
 
 
 def _merge_district_nums(table: pd.DataFrame, district_nums: pd.DataFrame) -> pd.DataFrame:
-    out = table.merge(district_nums[["District_Num"]], left_on=["District"], right_index=True, how="left")
+    out = table.merge(
+        district_nums[["District_Num"]], left_on=["District"], right_index=True, how="left"
+    )
 
     # Ensure every district has a district number
     if out["District_Num"].isna().any():

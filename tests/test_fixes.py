@@ -115,8 +115,8 @@ def test_apply_cell_patches_applies_value_with_normalized_row_and_col() -> None:
     patches = pd.DataFrame(
         {
             "sheet": ["S"],
-            "row_label": ["Row 1"],     # normalized match
-            "col_label": ["Col A"],     # normalized match
+            "row_label": ["Row 1"],  # normalized match
+            "col_label": ["Col A"],  # normalized match
             "value": [123],
         }
     )
@@ -165,8 +165,6 @@ def test_apply_cell_patches_non_strict_skips_missing_row_or_col() -> None:
 
 def test_apply_cell_patches_index_is_labels_false_not_implemented() -> None:
     df = pd.DataFrame({"x": [1]}, index=["A"])
-    patches = pd.DataFrame(
-        {"sheet": ["S"], "row_label": ["A"], "col_label": ["x"], "value": [9]}
-    )
+    patches = pd.DataFrame({"sheet": ["S"], "row_label": ["A"], "col_label": ["x"], "value": [9]})
     with pytest.raises(NotImplementedError):
         apply_cell_patches(df, patches, sheet="S", index_is_labels=False)

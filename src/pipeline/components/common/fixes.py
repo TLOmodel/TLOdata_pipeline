@@ -14,6 +14,7 @@ Classes:
   - WPPReader: Reads and processes WPP data with specific configurations for country-level
     filtering, column removal, and data concatenation.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
@@ -60,7 +61,9 @@ class WPPReader:
         "Region, subregion, country or area",
     )
 
-    def read_concat(self, file_path: str | Path, sheets: Iterable[str], **read_excel_kwargs) -> pd.DataFrame:
+    def read_concat(
+        self, file_path: str | Path, sheets: Iterable[str], **read_excel_kwargs
+    ) -> pd.DataFrame:
         file_path = str(file_path)
         frames = [
             pd.read_excel(file_path, sheet_name=s, header=self.header_row, **read_excel_kwargs)
@@ -77,11 +80,7 @@ class WPPReader:
 
     @staticmethod
     def _norm_str(s: pd.Series) -> pd.Series:
-        return (
-            s.astype(str)
-            .str.replace("\u00a0", " ", regex=False)  # NBSP
-            .str.strip()
-        )
+        return s.astype(str).str.replace("\u00a0", " ", regex=False).str.strip()  # NBSP
 
     def filter_country(self, df: pd.DataFrame) -> pd.DataFrame:
         ccol = self._country_col(df)
@@ -216,7 +215,9 @@ def apply_cell_patches(
     """
     required = {"sheet", "row_label", "col_label", "value"}
     if not required.issubset(patches_df.columns):
-        raise KeyError(f"patches_df must have columns {required}. Found: {list(patches_df.columns)}")
+        raise KeyError(
+            f"patches_df must have columns {required}. Found: {list(patches_df.columns)}"
+        )
 
     out = df.copy()
 

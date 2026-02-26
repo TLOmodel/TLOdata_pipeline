@@ -53,7 +53,9 @@ def _make_deaths_df(extra_sex: str) -> pd.DataFrame:
     return df
 
 
-def test_wpp_builder_writes_expected_outputs_and_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_wpp_builder_writes_expected_outputs_and_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     raw_dir = tmp_path / "inputs" / "demography"
     raw_dir.mkdir(parents=True)
     resources_dir = tmp_path / "outputs" / "resources"
@@ -73,23 +75,19 @@ def test_wpp_builder_writes_expected_outputs_and_manifest(tmp_path: Path, monkey
             "header_row": 16,
             "country_col_index": 2,
             "enable_annual_pop": False,  # avoid census dependency in this unit test
-
             "pop_agegrp_male": touch("wpp/pop_agegrp_male.xlsx"),
             "pop_agegrp_female": touch("wpp/pop_agegrp_female.xlsx"),
             "pop_agegrp_sheets": ["ESTIMATES"],
             "pop_agegrp_multiplier": 1000,
-
             "total_births_file": touch("wpp/total_births.xlsx"),
             "sex_ratio_file": touch("wpp/sex_ratio.xlsx"),
             "asfr_file": touch("wpp/asfr.xlsx"),
             "fert_sheets_all": ["ESTIMATES"],
             "fert_sheets_est_med": ["ESTIMATES"],
-
             "deaths_male_file": touch("wpp/deaths_m.xlsx"),
             "deaths_female_file": touch("wpp/deaths_f.xlsx"),
             "deaths_sheets": ["ESTIMATES"],
             "deaths_multiplier": 1000,
-
             "lifetable_male_file": touch("wpp/life_m.xlsx"),
             "lifetable_female_file": touch("wpp/life_f.xlsx"),
             "lifetable_sheets": ["ESTIMATES"],

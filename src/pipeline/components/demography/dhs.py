@@ -121,7 +121,9 @@ class DHSBuilder(ResourceBuilder):
         # U5 checks
         u5 = outputs["ResourceFile_Under_Five_Mortality_DHS.csv"]
         if list(u5.columns) != ["Year", "Est", "Lo", "Hi"]:
-            raise AssertionError(f"U5 columns must be ['Year','Est','Lo','Hi'], got {list(u5.columns)}")
+            raise AssertionError(
+                f"U5 columns must be ['Year','Est','Lo','Hi'], got {list(u5.columns)}"
+            )
 
         for c in ["Est", "Lo", "Hi"]:
             vals = pd.to_numeric(u5[c], errors="coerce").dropna()
@@ -184,14 +186,20 @@ def read_dhs_u5_table(dhs_file: str | Path, sheet: str, header: int = 1) -> pd.D
     hi_col = find_col(["hi", "higher", "upper", "uci"])
 
     if est_col is None or lo_col is None or hi_col is None:
-        numeric_cols = [c for c in raw.columns if pd.to_numeric(raw[c], errors="coerce").notna().any()]
+        numeric_cols = [
+            c for c in raw.columns if pd.to_numeric(raw[c], errors="coerce").notna().any()
+        ]
         numeric_cols_wo_year = [c for c in numeric_cols if c != year_col]
         if len(numeric_cols_wo_year) < 3:
             raise ValueError(
                 "Could not identify Est/Lo/Hi columns in DHS U5 sheet. "
                 f"Found columns: {list(raw.columns)}"
             )
-        est_col, lo_col, hi_col = numeric_cols_wo_year[-3], numeric_cols_wo_year[-2], numeric_cols_wo_year[-1]
+        est_col, lo_col, hi_col = (
+            numeric_cols_wo_year[-3],
+            numeric_cols_wo_year[-2],
+            numeric_cols_wo_year[-1],
+        )
 
     out = raw[[year_col, est_col, lo_col, hi_col]].copy()
     out.columns = ["Year", "Est", "Lo", "Hi"]

@@ -118,7 +118,13 @@ def test_read_country_table_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: 
         {"Location": ["Tanzania", "Kenya"], "Meta": [0, 0], "X": [1, 2], "Y": [3, 4], "Z": [5, 6]}
     )
     sheet2 = pd.DataFrame(
-        {"Location": ["Tanzania", "Uganda"], "Meta": [0, 0], "X": [10, 20], "Y": [30, 40], "Z": [50, 60]}
+        {
+            "Location": ["Tanzania", "Uganda"],
+            "Meta": [0, 0],
+            "X": [10, 20],
+            "Y": [30, 40],
+            "Z": [50, 60],
+        }
     )
 
     def fake_read_excel(file_path, sheet_name, header, **kwargs):
@@ -131,7 +137,9 @@ def test_read_country_table_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: 
 
     monkeypatch.setattr(pd, "read_excel", fake_read_excel)
 
-    r = WPPReader(country_label="Tanzania", header_row=16, country_col_index=0, drop_col_positions=(1,))
+    r = WPPReader(
+        country_label="Tanzania", header_row=16, country_col_index=0, drop_col_positions=(1,)
+    )
     out = r.read_country_table(tmp_path / "fake.xlsx", sheets=["S1", "S2"], extra_cols={"Sex": "M"})
 
     # Should include Tanzania rows from both sheets (2 rows)

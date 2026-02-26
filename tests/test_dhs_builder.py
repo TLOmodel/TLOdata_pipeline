@@ -10,7 +10,9 @@ from pipeline.components.demography.dhs import DHSBuilder
 from pipeline.components.resource_builder import BuildContext
 
 
-def test_dhs_builder_writes_expected_outputs_and_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dhs_builder_writes_expected_outputs_and_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     raw_dir = tmp_path / "inputs" / "demography"
     raw_dir.mkdir(parents=True)
     dhs_path = raw_dir / "dhs" / "dhs_data.xlsx"

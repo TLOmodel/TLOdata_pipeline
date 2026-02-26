@@ -164,9 +164,7 @@ class ResourceBuilder:
     # Internal validation
     # ------------------------------------------------------------------
 
-    def _normalize_outputs(
-        self, outputs: Mapping[str, pd.DataFrame]
-    ) -> Mapping[str, pd.DataFrame]:
+    def _normalize_outputs(self, outputs: Mapping[str, pd.DataFrame]) -> Mapping[str, pd.DataFrame]:
 
         if not isinstance(outputs, Mapping):
             raise TypeError("build() must return dict[str, pd.DataFrame].")
@@ -177,8 +175,6 @@ class ResourceBuilder:
 
         bad_vals = [k for k, v in outputs.items() if not isinstance(v, pd.DataFrame)]
         if bad_vals:
-            raise TypeError(
-                f"Output values must be pandas DataFrames. Invalid keys: {bad_vals}"
-            )
+            raise TypeError(f"Output values must be pandas DataFrames. Invalid keys: {bad_vals}")
 
         return outputs

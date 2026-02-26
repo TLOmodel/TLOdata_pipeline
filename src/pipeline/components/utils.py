@@ -135,6 +135,7 @@ def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> 
     - If min_age > 0, ages < min_age map to "0-min_age"
     - Ages >= max_age map to f"{max_age}+"
     """
+
     def chunks(items, n):
         for index in range(0, len(items), n):
             yield items[index : index + n]

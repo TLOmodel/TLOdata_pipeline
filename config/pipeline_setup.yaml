@@ -1,6 +1,6 @@
-country_code: tz
-country_name: Tanzania
-wpp_name: United Republic of Tanzania
+country_code: country_code
+country_name: country_name
+wpp_name: country_wpp_name
 
 paths:
   input_dir: inputs/demography

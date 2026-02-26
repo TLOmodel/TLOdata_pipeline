@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-This module provides functionality to load YAML configuration files and resolve
-placeholders within the configuration dictionary using template resolution.
+Utilities for:
+  - loading YAML configs (with {a.b.c} template resolution)
+  - resolving input paths consistently in ResourceBuilder-based pipelines
+  - common demography lookups (age ranges, calendar periods)
 
-The module defines components to fetch nested configuration values via dotted keys,
-resolve placeholders in configuration files, and load configuration files
-from the filesystem while handling template substitutions.
+Conventions:
+  1) All runners MUST call load_cfg() so templates are resolved uniformly.
+  2) All file paths in YAML SHOULD be relative to paths.input_dir (ctx.raw_dir).
+     Absolute paths are allowed.
 """
 
 from __future__ import annotations
@@ -13,13 +16,18 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import yaml
+
+from pipeline.components.resource_builder import BuildContext
 
 _PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_.]+)}")
 
 
+# ---------------------------------------------------------------------
+# Config loading + template resolution
+# ---------------------------------------------------------------------
 def _get_by_dotted_key(cfg: dict[str, Any], key: str) -> Any:
     cur: Any = cfg
     for part in key.split("."):
@@ -39,10 +47,13 @@ def resolve_templates(cfg: dict[str, Any], max_passes: int = 5) -> dict[str, Any
                 return str(_get_by_dotted_key(cfg, m.group(1)))
 
             return _PLACEHOLDER.sub(repl, v)
+
         if isinstance(v, list):
             return [resolve_value(x) for x in v]
+
         if isinstance(v, dict):
             return {k: resolve_value(x) for k, x in v.items()}
+
         return v
 
     for _ in range(max_passes):
@@ -50,13 +61,30 @@ def resolve_templates(cfg: dict[str, Any], max_passes: int = 5) -> dict[str, Any
         if new_cfg == cfg:
             break
         cfg = new_cfg
+
+    # Fail fast if templates still remain (usually indicates a missing key)
+    def _has_placeholders(v: Any) -> bool:
+        if isinstance(v, str):
+            return bool(_PLACEHOLDER.search(v))
+        if isinstance(v, list):
+            return any(_has_placeholders(x) for x in v)
+        if isinstance(v, dict):
+            return any(_has_placeholders(x) for x in v.values())
+        return False
+
+    if _has_placeholders(cfg):
+        raise ValueError(
+            "Unresolved {templates} remain in config after resolution. "
+            "Check for missing keys or circular references."
+        )
+
     return cfg
 
 
 def load_cfg(path: str | Path = "config/pipeline_setup.yaml") -> dict[str, Any]:
     """
     Load YAML config from path and resolve any {templates}.
-    Usage: cfg = load_cfg("config/mw.yaml")
+    Usage: cfg = load_cfg("config/tz.yaml")
     """
     path = Path(path)
     if not path.exists():
@@ -69,67 +97,71 @@ def load_cfg(path: str | Path = "config/pipeline_setup.yaml") -> dict[str, Any]:
     return resolve_templates(cfg)
 
 
-def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> dict[int, str]:
-    """Create age-range categories and a dictionary that will map all whole years to
-    age-range categories
-
-    If the minimum age is not zero then a below minimum age category will be made,
-    then age ranges until maximum age will be made by the range size,
-    all other ages will map to the greater than maximum age category.
-
-    :param min_age: Minimum age for categories,
-    :param max_age: Maximum age for categories, a greater than maximum age category will be made
-    :param range_size: Size of each category between minimum and maximum ages
-    :returns:
-        age_categories: ordered list of age categories available
-        lookup: Default dict of integers to maximum age mapping to the age categories
+# ---------------------------------------------------------------------
+# Path resolution helpers (ResourceBuilder)
+# ---------------------------------------------------------------------
+def resolve_input_path(ctx: BuildContext, value: Union[str, Path]) -> Path:
     """
+    Resolve a config-defined input path.
 
+    Contract:
+      - Absolute paths are used as-is.
+      - Relative paths are interpreted relative to ctx.raw_dir.
+      - If a value still contains '{...}', it means load_cfg() wasn't used or YAML is not clean.
+
+    This keeps behavior deterministic and avoids "double-prefix" or CWD-dependent resolution.
+    """
+    s = str(value).strip()
+    if _PLACEHOLDER.search(s):
+        raise ValueError(
+            f"Unresolved template in path value: {s!r}. "
+            "Ensure runners call load_cfg(), and YAML paths are not templated with {paths.input_dir}."
+        )
+
+    p = Path(s).expanduser()
+    if p.is_absolute():
+        return p
+
+    return (ctx.raw_dir / p).resolve()
+
+
+# ---------------------------------------------------------------------
+# Demography lookups
+# ---------------------------------------------------------------------
+def create_age_range_lookup(min_age: int, max_age: int, range_size: int = 5) -> dict[int, str]:
+    """
+    Map each whole-year age -> age-range label.
+
+    - If min_age > 0, ages < min_age map to "0-min_age"
+    - Ages >= max_age map to f"{max_age}+"
+    """
     def chunks(items, n):
-        """Takes a list and divides it into parts of size n"""
         for index in range(0, len(items), n):
             yield items[index : index + n]
 
-    # split all the ages from min to limit
     parts = chunks(range(min_age, max_age), range_size)
 
     default_category = f"{max_age}+"
     lookup = defaultdict(lambda: default_category)
-    age_categories = []
 
-    # create category for minimum age
     if min_age > 0:
         under_min_age_category = f"0-{min_age}"
-        age_categories.append(under_min_age_category)
         for i in range(0, min_age):
             lookup[i] = under_min_age_category
 
-    # loop over each range and map all ages falling within the range to the range
     for part in parts:
         start = part.start
         end = part.stop - 1
-        value = f"{start}-{end}"
-        age_categories.append(value)
+        label = f"{start}-{end}"
         for i in range(start, part.stop):
-            lookup[i] = value
-
-    age_categories.append(default_category)
+            lookup[i] = label
 
     return lookup
 
 
-def make_calendar_period_lookup():
-    """Returns a dictionary mapping calendar year (in years) to five year period
-    i.e. { 1950: '1950-1954', 1951: '1950-1954, ...}
-    """
-
-    # Recycles the code used to make age-range lookups:
+def make_calendar_period_lookup() -> dict[int, str]:
+    """Map calendar year -> 5-year period (e.g. 1950 -> '1950-1954')."""
     lookup = create_age_range_lookup(1950, 2100, 5)
-
-    # Removes the '0-1950' category
-    # ranges.remove('0-1950')
-
     for year in range(1950):
-        lookup.pop(year)
-
+        lookup.pop(year, None)
     return lookup

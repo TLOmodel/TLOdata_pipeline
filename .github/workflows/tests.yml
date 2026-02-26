@@ -40,4 +40,13 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          pytest -vv -ra --maxfail=1 --junitxml=pytest.xml
+
+      - name: Publish test report
+        if: always()
+        uses: pmeier/pytest-results-action@v0.6.0
+        with:
+          path: pytest.xml
+          summary: true
+          display-options: fEX
+          title: Pytest results (py${{ matrix.python-version }})

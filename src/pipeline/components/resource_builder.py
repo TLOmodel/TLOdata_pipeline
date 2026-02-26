@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, List, Mapping, Optional, Sequence
 
-import json
 import pandas as pd
 
 
@@ -13,14 +13,14 @@ class BuildContext:
     """
     Context shared across all builders.
 
-    This keeps every pipeline stage consistent:
-      - cfg: parsed YAML for country (e.g. config/mw.yaml)
-      - country: ISO-ish code used in your folder layout ("mw", "tz", ...)
-      - raw_dir: root raw data directory
-      - resources_dir: root resources directory
-      - component: logical component name (e.g. "demography")
-      - output_dir: computed as resources_dir / country / component
+    - cfg: parsed YAML for country (e.g. config/tz.yaml)
+    - country: ISO-like code ("tz", "mw", etc.) — informational only
+    - raw_dir: root raw data directory
+    - resources_dir: root resources directory
+    - component: logical component name (e.g. "demography")
+    - output_dir: computed as resources_dir / component
     """
+
     cfg: Mapping[str, Any]
     country: str
     raw_dir: Path
@@ -29,18 +29,15 @@ class BuildContext:
 
     @property
     def output_dir(self) -> Path:
-        return self.resources_dir / self.country / self.component
+        return self.resources_dir / self.component
 
 
 @dataclass(frozen=True)
 class ResourceArtifact:
     """
-    Single-produced artifact (usually a CSV).
-
-    name: file name, e.g. "ResourceFile_Population_2010.csv"
-    path: absolute/relative path to artifact
-    rows/cols: optional metadata for quick inspection
+    Represents a single produced artifact (usually a CSV).
     """
+
     name: str
     path: Path
     rows: Optional[int] = None
@@ -49,46 +46,29 @@ class ResourceArtifact:
 
 class ResourceBuilder:
     """
-    Base class for any script that turns raw data into TLO resourcefiles.
+    Base class for scripts that transform raw data into TLO resource files.
 
     Lifecycle:
         preflight -> load_data -> build -> validate -> write -> write_manifest
-
-    Subclasses implement:
-      - load_data(): read raw sources / inputs into in-memory objects (DataFrames, dicts, etc.)
-      - build(raw): transform loaded inputs into dict[str, pd.DataFrame]
-      - validate(outputs): assert invariants (row sums, keys, coverage, etc.)
-
-    The base class provides:
-      - consistent output dirs
-      - writing CSVs with stable conventions
-      - manifest writing for downstream discovery (reporting/tests)
     """
 
-    # Override in subclass
     COMPONENT: str = "unknown_component"
 
-    # Optional: enforce required inputs existence before build()
+    # Relative to ctx.raw_dir
     REQUIRED_INPUTS: Sequence[str] = ()
 
-    # Optional: predictable output filenames (helps tests/reports)
+    # Unconditional expected outputs
     EXPECTED_OUTPUTS: Sequence[str] = ()
 
     def __init__(self, ctx: BuildContext, *, dry_run: bool = False) -> None:
         self.ctx = ctx
         self.dry_run = dry_run
 
-    # ---------- lifecycle API ----------
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def run(self) -> List[ResourceArtifact]:
-        """
-        Orchestrates the full lifecycle:
-          1) preflight checks
-          2) load raw data
-          3) build outputs
-          4) validate
-          5) write outputs + manifest
-        """
         self.preflight()
 
         raw = self.load_data()
@@ -103,106 +83,101 @@ class ResourceBuilder:
         return artifacts
 
     def preflight(self) -> None:
-        """Lightweight checks before doing any heavy work."""
-        out = self.ctx.output_dir
-        out.mkdir(parents=True, exist_ok=True)
+        """Ensure output directory exists and required inputs are present."""
+        self.ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Optional required raw inputs
         missing: List[str] = []
         for rel in self.REQUIRED_INPUTS:
             p = self.ctx.raw_dir / rel
             if not p.exists():
                 missing.append(str(p))
+
         if missing:
             raise FileNotFoundError(
                 "Missing required raw inputs:\n" + "\n".join(f"- {m}" for m in missing)
             )
 
-    # ---------- subclass hooks ----------
+    # ------------------------------------------------------------------
+    # Hooks to implement in subclasses
+    # ------------------------------------------------------------------
 
     def load_data(self) -> Mapping[str, Any]:
-        """
-        Read raw inputs from ctx.raw_dir (or elsewhere) and return them as a mapping.
-
-        Recommended pattern:
-            return {
-                "a1": pd.read_excel(...),
-                "wpp_births": births_df,
-                "lookup": some_dict,
-                ...
-            }
-
-        Why Mapping[str, Any]?
-        - different builders will load different kinds of inputs
-        - this keeps build(raw) explicit and testable
-
-        Subclasses must implement this if they use raw inputs.
-        If a builder does not require raw inputs, it can return {}.
-        """
         raise NotImplementedError
 
     def build(self, raw: Mapping[str, Any]) -> Mapping[str, pd.DataFrame]:
-        """
-        Transform loaded inputs into a mapping of output filename -> DataFrame.
-
-        Recommended: return dict[filename, dataframe].
-        """
         raise NotImplementedError
 
     def validate(self, outputs: Mapping[str, pd.DataFrame]) -> None:
-        """
-        Assert invariants. Keep these strict. Fail fast.
-
-        Examples:
-          - Sum of districts equals national totals
-          - Region groupby sums match reported region totals
-          - Age fractions sum to 1.0 (within tolerance)
-          - Key columns contain no nulls
-          - expected outputs exist
-        """
-        # Default: just enforce EXPECTED_OUTPUTS if declared
         if self.EXPECTED_OUTPUTS:
             missing = set(self.EXPECTED_OUTPUTS).difference(outputs.keys())
             if missing:
                 raise AssertionError(f"Expected outputs missing: {sorted(missing)}")
 
-    # ---------- base implementations ----------
+    # ------------------------------------------------------------------
+    # Base implementations
+    # ------------------------------------------------------------------
 
     def write(self, outputs: Mapping[str, pd.DataFrame]) -> List[ResourceArtifact]:
-        """Write CSVs to ctx.output_dir with consistent conventions."""
         artifacts: List[ResourceArtifact] = []
-        for name, df in outputs.items():
+
+        for name in sorted(outputs.keys()):
+            df = outputs[name]
             path = self.ctx.output_dir / name
+
             if not self.dry_run:
+                path.parent.mkdir(parents=True, exist_ok=True)
                 df.to_csv(path, index=False)
+
             artifacts.append(
-                ResourceArtifact(name=name, path=path, rows=len(df), cols=len(df.columns))
+                ResourceArtifact(
+                    name=name,
+                    path=path,
+                    rows=len(df),
+                    cols=len(df.columns),
+                )
             )
+
         return artifacts
 
     def write_manifest(self, artifacts: Sequence[ResourceArtifact]) -> None:
-        """
-        Write a machine-readable manifest that reporting/tests can consume.
-        """
         manifest = {
-            "country": self.ctx.country,
             "component": self.ctx.component,
             "builder": type(self).__name__,
             "artifacts": [
-                {"name": a.name, "path": str(a.path), "rows": a.rows, "cols": a.cols}
+                {
+                    "name": a.name,
+                    "path": str(a.path),
+                    "rows": a.rows,
+                    "cols": a.cols,
+                }
                 for a in artifacts
             ],
         }
-        path = self.ctx.output_dir / "resource_manifest.json"
+
+        path = self.ctx.output_dir / f"resource_manifest_{type(self).__name__}.json"
+
         if not self.dry_run:
             path.write_text(json.dumps(manifest, indent=2))
 
-    # ---------- helpers ----------
+    # ------------------------------------------------------------------
+    # Internal validation
+    # ------------------------------------------------------------------
 
-    def _normalize_outputs(self, outputs: Mapping[str, pd.DataFrame]) -> Mapping[str, pd.DataFrame]:
-        if isinstance(outputs, Mapping):
-            return outputs
-        raise TypeError(
-            "build() must return dict[str, pd.DataFrame]. "
-            "If you need non-dataframe artifacts, override write()/write_manifest()."
-        )
+    def _normalize_outputs(
+        self, outputs: Mapping[str, pd.DataFrame]
+    ) -> Mapping[str, pd.DataFrame]:
+
+        if not isinstance(outputs, Mapping):
+            raise TypeError("build() must return dict[str, pd.DataFrame].")
+
+        bad_keys = [k for k in outputs if not isinstance(k, str)]
+        if bad_keys:
+            raise TypeError(f"Output keys must be strings. Invalid keys: {bad_keys}")
+
+        bad_vals = [k for k, v in outputs.items() if not isinstance(v, pd.DataFrame)]
+        if bad_vals:
+            raise TypeError(
+                f"Output values must be pandas DataFrames. Invalid keys: {bad_vals}"
+            )
+
+        return outputs

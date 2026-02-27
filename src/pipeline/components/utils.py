@@ -115,7 +115,8 @@ def resolve_input_path(ctx: BuildContext, value: str | Path) -> Path:
     if _PLACEHOLDER.search(s):
         raise ValueError(
             f"Unresolved template in path value: {s!r}. "
-            "Ensure runners call load_cfg(), and YAML paths are not templated with {paths.input_dir}."
+            "Ensure runners call load_cfg(), and "
+            "YAML paths are not templated with {paths.input_dir}."
         )
 
     p = Path(s).expanduser()

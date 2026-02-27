@@ -1,3 +1,13 @@
+"""
+Unit test for testing the DHSBuilder functionality and its outputs.
+
+The function tests whether the DHSBuilder reads the provided input(s),
+produces the expected outputs (e.g., CSV files), and generates the related
+resource manifest. It validates key integration aspects like Excel file reading,
+correct handling of data inputs, and outputs being written to disk.
+
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +23,28 @@ from pipeline.components.resource_builder import BuildContext
 def test_dhs_builder_writes_expected_outputs_and_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    This function tests the DHSBuilder functionality, particularly its capability to
+    process specific input configurations, generate the expected artifacts, and write
+    the required files to the output directories. The test simulates the input
+    environment, mocks Excel file reading behavior, and validates the outputs.
+
+    This test includes the creation of input directories and files, patching the
+    behavior of pandas' `read_excel` function to provide mock DataFrames, and asserting
+    that the generated output matches the expected structure and file names.
+
+    Args:
+        tmp_path (Path): Temporary directory provided by pytest for test file I/O.
+        monkeypatch (pytest.MonkeyPatch): pytest fixture used to dynamically modify
+        attributes such as replacing `pd.read_excel`.
+
+    Raises:
+        AssertionError: Raised if preconditions are not met (e.g., unexpected paths or
+        sheet names), or if the generated outputs deviate from the test expectations.
+
+    Returns:
+        None
+    """
     raw_dir = tmp_path / "inputs" / "demography"
     raw_dir.mkdir(parents=True)
     dhs_path = raw_dir / "dhs" / "dhs_data.xlsx"
@@ -53,7 +85,29 @@ def test_dhs_builder_writes_expected_outputs_and_manifest(
         }
     )
 
-    def fake_read_excel(path, sheet_name=None, header=None, *args, **kwargs):
+    def fake_read_excel(path, sheet_name=None):
+        """
+        Simulates reading an Excel file and returning a DataFrame based on the sheet name.
+
+        This function is primarily used for testing scenarios where Excel files
+        are expected to have certain predefined sheets. Depending on the sheet name
+        provided, it will return a mocked DataFrame that mirrors the expected data.
+        If the sheet name is not recognized, an assertion error is raised.
+
+        Args:
+            path: The file path to the Excel file as a string or Path-like object.
+            sheet_name: Name of the sheet to be read from the Excel file, or None.
+            header: Row number(s) to use as the column names, or None.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            AssertionError: If the file path does not match a predefined condition
+                            or an unexpected sheet name is provided.
+
+        Returns:
+            A copy of the mocked DataFrame corresponding to the specified sheet name.
+        """
         assert str(path) == str(dhs_path)
         if sheet_name == "ASFR":
             return asfr_df.copy()

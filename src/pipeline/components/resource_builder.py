@@ -1,3 +1,7 @@
+"""
+A template for all classes that builds raw files into TLO resources.
+"""
+
 from __future__ import annotations
 
 import json
@@ -30,6 +34,16 @@ class BuildContext:
 
     @property
     def output_dir(self) -> Path:
+        """
+        Returns the output directory associated with the current component.
+
+        The output directory is derived by joining the resources directory and the
+        component name. This property provides a convenient way of accessing the
+        computed directory path.
+
+        Returns:
+            Path: The output directory path corresponding to the current component.
+        """
         return self.resources_dir / self.component
 
 
@@ -70,12 +84,22 @@ class ResourceBuilder:
     # ------------------------------------------------------------------
 
     def run(self) -> list[ResourceArtifact]:
+        """
+        Runs the complete processing workflow including preflight checks, data loading,
+        transformation, validation, and writing the final output along with its manifest.
+
+        Returns
+        -------
+        list[ResourceArtifact]
+            A list of ResourceArtifact objects representing the processed and written
+            data resources.
+        """
         self.preflight()
 
         raw = self.load_data()
         outputs = self.build(raw)
 
-        df_map = self._normalize_outputs(outputs)
+        df_map = self.normalize_outputs(outputs)
         self.validate(df_map)
 
         artifacts = self.write(df_map)
@@ -103,12 +127,65 @@ class ResourceBuilder:
     # ------------------------------------------------------------------
 
     def load_data(self) -> Mapping[str, Any]:
+        """
+        Loads data from a specified source.
+
+        This method should be implemented by subclasses to define the logic
+        for fetching or loading data. Calling it in its current state will raise
+        a NotImplementedError.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+
+        Returns:
+            Mapping[str, Any]: The loaded data.
+        """
         raise NotImplementedError
 
     def build(self, raw: Mapping[str, Any]) -> Mapping[str, pd.DataFrame]:
+        """
+        Builds a structured data representation based on the provided raw data.
+
+        This method is expected to take a raw input, process it, and return a
+        mapping where the keys are strings, and the values are pandas DataFrame
+        objects. Custom implementations must override this method and provide
+        the specific logic for building the resulting data structure.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented in a subclass.
+
+        Parameters
+        ----------
+        raw : Mapping[str, Any]
+            The input data to be processed, represented as a mapping where
+            keys are strings and values can be of any type.
+
+        Returns
+        -------
+        Mapping[str, pd.DataFrame]
+            A mapping where keys are strings, and values are pandas DataFrame
+            objects that represent the processed and structured data.
+        """
         raise NotImplementedError
 
     def validate(self, outputs: Mapping[str, pd.DataFrame]) -> None:
+        """
+        Validates the provided outputs against the expected outputs specified by the class. If any
+        expected output keys are missing from the actual outputs, an AssertionError is raised.
+
+        Parameters
+        ----------
+        outputs : Mapping[str, pd.DataFrame]
+            A mapping of output names to their corresponding data frames. The keys should
+            match the expected outputs defined by the class.
+
+        Raises
+        ------
+        AssertionError
+            If any of the expected outputs are missing from the provided outputs.
+        """
         if self.EXPECTED_OUTPUTS:
             missing = set(self.EXPECTED_OUTPUTS).difference(outputs.keys())
             if missing:
@@ -119,6 +196,25 @@ class ResourceBuilder:
     # ------------------------------------------------------------------
 
     def write(self, outputs: Mapping[str, pd.DataFrame]) -> list[ResourceArtifact]:
+        """
+        Writes the given dataframes to CSV files and generates associated artifacts.
+        The dataframes are written under the output directory specified by the context.
+        Artifacts, detailing information about the written files, such as file name,
+        path, row count, and column count, are created for each dataframe and returned.
+
+        Parameters:
+            outputs: Mapping[str, pd.DataFrame]
+                A mapping where the key represents the name of the output file and the
+                value is a pandas DataFrame to be written.
+
+        Returns:
+            list[ResourceArtifact]
+                A list of ResourceArtifact objects representing metadata about the
+                written files.
+
+        Raises:
+            None
+        """
         artifacts: list[ResourceArtifact] = []
 
         for name in sorted(outputs.keys()):
@@ -141,6 +237,22 @@ class ResourceBuilder:
         return artifacts
 
     def write_manifest(self, artifacts: Sequence[ResourceArtifact]) -> None:
+        """
+        Writes a manifest file containing metadata about provided artifacts.
+
+        The method generates a JSON-structured manifest that represents metadata
+        of the provided sequence of resource artifacts. This metadata includes
+        name, path, rows, and columns of each artifact. The manifest is written
+        to a file within the output directory specified in the context, unless
+        the dry_run flag is set to True.
+
+        Parameters:
+            artifacts (Sequence[ResourceArtifact]): A sequence of resource artifacts
+            containing metadata such as name, path, rows, and columns.
+
+        Raises:
+            None
+        """
         manifest = {
             "component": self.ctx.component,
             "builder": type(self).__name__,
@@ -164,8 +276,25 @@ class ResourceBuilder:
     # Internal validation
     # ------------------------------------------------------------------
 
-    def _normalize_outputs(self, outputs: Mapping[str, pd.DataFrame]) -> Mapping[str, pd.DataFrame]:
+    def normalize_outputs(self, outputs: Mapping[str, pd.DataFrame]) -> Mapping[str, pd.DataFrame]:
+        """
+        Normalizes the outputs by validating their types and formats.
 
+        Ensures the provided outputs are of type Mapping with string keys and pandas DataFrame
+        values. Raises errors if the validations fail. Returns the original outputs if they
+        meet the criteria.
+
+        Args:
+            outputs: A Mapping object containing string keys and pandas DataFrame values.
+
+        Returns:
+            A Mapping object containing string keys and pandas DataFrame values that pass the
+            validation.
+
+        Raises:
+            TypeError: If the outputs are not a Mapping, if any keys are not strings, or
+            if any values are not pandas DataFrames.
+        """
         if not isinstance(outputs, Mapping):
             raise TypeError("build() must return dict[str, pd.DataFrame].")
 

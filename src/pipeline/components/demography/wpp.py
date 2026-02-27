@@ -43,104 +43,152 @@ from pipeline.components.utils import (
 # ---------------------------------------------------------------------
 @dataclass(frozen=True)
 class WPPConfig:
+    """
+    Configuration settings for World Population Prospects (WPP) processing.
+
+    The config encapsulates reader controls, input paths, sheet lists, multipliers,
+    and optional annual population settings. Use `from_ctx()` to build a config from
+    the pipeline BuildContext.
+    """
+
     # Reader controls
-    country_label: str
-    header_row: int = 16
-    country_col_index: int = 2
+    # country_label: str
+    # header_row: int = 16
+    # country_col_index: int = 2
+    # # Model/census tie-in
+    # census_year: int = 2018
+    # max_age: int = 120
+
+    extras_dict: dict
 
     # Age-group population (5-year)
-    pop_agegrp_male: Path = Path()
-    pop_agegrp_female: Path = Path()
-    pop_agegrp_sheets: list[str] = None  # type: ignore[assignment]
-    pop_agegrp_multiplier: float = 1000.0
+    pop_agegrp_dict: dict
+    # pop_agegrp_female: Path = Path()
+    # pop_agegrp_sheets: list[str] = None  # type: ignore[assignment]
+    # pop_agegrp_multiplier: float = 1000.0
 
     # Fertility
-    total_births_file: Path = Path()
-    sex_ratio_file: Path = Path()
-    asfr_file: Path = Path()
-    fert_sheets_all: list[str] = None  # type: ignore[assignment]
-    fert_sheets_est_med: list[str] = None  # type: ignore[assignment]
+    fertility_dict: dict
+    # total_births_file: Path = Path()
+    # sex_ratio_file: Path = Path()
+    # asfr_file: Path = Path()
+    # fert_sheets_all: list[str] = None  # type: ignore[assignment]
+    # fert_sheets_est_med: list[str] = None  # type: ignore[assignment]
 
     # Deaths (5-year)
-    deaths_male_file: Path = Path()
-    deaths_female_file: Path = Path()
-    deaths_sheets: list[str] = None  # type: ignore[assignment]
-    deaths_multiplier: float = 1000.0
+    deaths_dict: dict
+    # deaths_male_file: Path = Path()
+    # deaths_female_file: Path = Path()
+    # deaths_sheets: list[str] = None  # type: ignore[assignment]
+    # deaths_multiplier: float = 1000.0
 
     # Life table
-    lifetable_male_file: Path = Path()
-    lifetable_female_file: Path = Path()
-    lifetable_sheets: list[str] = None  # type: ignore[assignment]
-    lifetable_usecols: Any | None = None
+    life_table_dict: dict
+    # lifetable_male_file: Path = Path()
+    # lifetable_female_file: Path = Path()
+    # lifetable_sheets: list[str] = None  # type: ignore[assignment]
+    # lifetable_usecols: Any | None = None
 
     # Annual pop (optional)
-    enable_annual_pop: bool = True
-    init_population_year: int = 2010
-    pop_annual_male_file: Path | None = None
-    pop_annual_female_file: Path | None = None
-    pop_annual_sheets: list[str] = None  # type: ignore[assignment]
-    pop_annual_multiplier: float = 1000.0
-    pop_annual_age_cols_slice_end: int = 103
-
-    # Model/census tie-in
-    census_year: int = 2018
-    max_age: int = 120
+    annual_pop_dict: dict
+    # enable_annual_pop: bool = True
+    # init_population_year: int = 2010
+    # pop_annual_male_file: Path | None = None
+    # pop_annual_female_file: Path | None = None
+    # pop_annual_sheets: list[str] = None  # type: ignore[assignment]
+    # pop_annual_multiplier: float = 1000.0
+    # pop_annual_age_cols_slice_end: int = 103
 
     @staticmethod
     def from_ctx(ctx: BuildContext) -> WPPConfig:
+        """
+        Construct a WPPConfig from BuildContext.
+
+        Reads cfg["wpp"], resolves input paths, and sets defaults for optional fields.
+        """
         wpp = ctx.cfg["wpp"]
 
         def _p(key: str) -> Path:
             return resolve_input_path(ctx, wpp[key])
 
-        census_year = int(ctx.cfg.get("census", {}).get("year", 2018))
-        max_age = int(ctx.cfg.get("model", {}).get("max_age", 120))
+        extras_dict = {
+            "country_label": str(wpp["country_label"]),
+            "header_row": int(wpp.get("header_row", 16)),
+            "country_col_index": int(wpp.get("country_col_index", 2)),
+            "census_year": int(ctx.cfg.get("census", {}).get("year", 2018)),
+            "max_age": int(ctx.cfg.get("model", {}).get("max_age", 120)),
+        }
 
-        return WPPConfig(
-            country_label=str(wpp["country_label"]),
-            header_row=int(wpp.get("header_row", 16)),
-            country_col_index=int(wpp.get("country_col_index", 2)),
-            pop_agegrp_male=_p("pop_agegrp_male"),
-            pop_agegrp_female=_p("pop_agegrp_female"),
-            pop_agegrp_sheets=list(wpp["pop_agegrp_sheets"]),
-            pop_agegrp_multiplier=float(wpp.get("pop_agegrp_multiplier", 1000)),
-            total_births_file=_p("total_births_file"),
-            sex_ratio_file=_p("sex_ratio_file"),
-            asfr_file=_p("asfr_file"),
-            fert_sheets_all=list(wpp["fert_sheets_all"]),
-            fert_sheets_est_med=list(wpp["fert_sheets_est_med"]),
-            deaths_male_file=_p("deaths_male_file"),
-            deaths_female_file=_p("deaths_female_file"),
-            deaths_sheets=list(wpp["deaths_sheets"]),
-            deaths_multiplier=float(wpp.get("deaths_multiplier", 1000)),
-            lifetable_male_file=_p("lifetable_male_file"),
-            lifetable_female_file=_p("lifetable_female_file"),
-            lifetable_sheets=list(wpp["lifetable_sheets"]),
-            lifetable_usecols=wpp.get("lifetable_usecols"),
-            enable_annual_pop=bool(wpp.get("enable_annual_pop", True)),
-            init_population_year=int(wpp.get("init_population_year", 2010)),
-            pop_annual_male_file=(
+        # Age-group population (5-year)
+        pop_agegrp = {
+            "pop_agegrp_male": _p("pop_agegrp_male"),
+            "pop_agegrp_female": _p("pop_agegrp_female"),
+            "pop_agegrp_sheets": list(wpp["pop_agegrp_sheets"]),
+            "pop_agegrp_multiplier": float(wpp.get("pop_agegrp_multiplier", 1000)),
+        }
+
+        # Fertility
+        fertility_dict = {
+            "total_births_file": _p("total_births_file"),
+            "sex_ratio_file": _p("sex_ratio_file"),
+            "asfr_file": _p("asfr_file"),
+            "fert_sheets_all": list(wpp["fert_sheets_all"]),
+            "fert_sheets_est_med": list(wpp["fert_sheets_est_med"]),
+        }
+
+        # Deaths (5-year)
+        deaths_dict = {
+            "deaths_male_file": _p("deaths_male_file"),
+            "deaths_female_file": _p("deaths_female_file"),
+            "deaths_sheets": list(wpp["deaths_sheets"]),
+            "deaths_multiplier": float(wpp.get("deaths_multiplier", 1000)),
+        }
+
+        # Life table
+        life_table_dict = {
+            "lifetable_male_file": _p("lifetable_male_file"),
+            "lifetable_female_file": _p("lifetable_female_file"),
+            "lifetable_sheets": list(wpp["lifetable_sheets"]),
+            "lifetable_usecols": wpp.get("lifetable_usecols"),
+        }
+
+        annual_pop_dict = {
+            "enable_annual_pop": bool(wpp.get("enable_annual_pop", True)),
+            "init_population_year": int(wpp.get("init_population_year", 2010)),
+            "pop_annual_male_file": (
                 _p("pop_annual_male_file") if "pop_annual_male_file" in wpp else None
             ),
-            pop_annual_female_file=(
+            "pop_annual_female_file": (
                 _p("pop_annual_female_file") if "pop_annual_female_file" in wpp else None
             ),
-            pop_annual_sheets=list(wpp.get("pop_annual_sheets", ["ESTIMATES", "MEDIUM VARIANT"])),
-            pop_annual_multiplier=float(wpp.get("pop_annual_multiplier", 1000)),
-            pop_annual_age_cols_slice_end=int(wpp.get("pop_annual_age_cols_slice_end", 103)),
-            census_year=census_year,
-            max_age=max_age,
+            "pop_annual_sheets": list(
+                wpp.get("pop_annual_sheets", ["ESTIMATES", "MEDIUM VARIANT"])
+            ),
+            "pop_annual_multiplier": float(wpp.get("pop_annual_multiplier", 1000)),
+            "pop_annual_age_cols_slice_end": int(wpp.get("pop_annual_age_cols_slice_end", 103)),
+        }
+
+        return WPPConfig(
+            extras_dict=extras_dict,
+            pop_agegrp_dict=pop_agegrp,
+            fertility_dict=fertility_dict,
+            deaths_dict=deaths_dict,
+            life_table_dict=life_table_dict,
+            annual_pop_dict=annual_pop_dict,
         )
 
 
 # ---------------------------------------------------------------------
-# Pure helpers
+# Pure helpers (existing + a few new to reduce build() complexity)
 # ---------------------------------------------------------------------
 def expand_frac_births_male_per_year(
     births_df: pd.DataFrame,
     year_lo: int = 1950,
     year_hi: int = 2100,
 ) -> pd.DataFrame:
+    """
+    Expand fraction of male births (derived from sex ratio) to annual values for [year_lo, year_hi).
+    """
     df = births_df.copy()
     df["frac_births_male"] = df["M_to_F_Sex_Ratio"] / (1.0 + df["M_to_F_Sex_Ratio"])
 
@@ -197,25 +245,26 @@ def _read_lifetable(*, cfg: WPPConfig, file_path: Path, sex: str) -> pd.DataFram
     df = pd.concat(
         [
             pd.read_excel(
-                file_path, sheet_name=s, header=cfg.header_row, usecols=cfg.lifetable_usecols
+                file_path,
+                sheet_name=s,
+                header=cfg.extras_dict["header_row"],
+                usecols=cfg.life_table_dict["lifetable_usecols"],
             )
-            for s in cfg.lifetable_sheets
+            for s in cfg.life_table_dict["lifetable_sheets"]
         ],
         sort=False,
         ignore_index=True,
     )
-
-    # Original WPP lifetable has the location in column index 1
     loc_col = df.columns[1]
-    df = _filter_country_by_col(df, loc_col, cfg.country_label)
+    df = _filter_country_by_col(df, loc_col, cfg.extras_dict["country_label"])
     df = df.drop(columns=[loc_col])
     df["Sex"] = sex
     return df
 
 
 def _lifetable_to_death_rates(*, cfg: WPPConfig) -> pd.DataFrame:
-    lt_m = _read_lifetable(cfg=cfg, file_path=cfg.lifetable_male_file, sex="M")
-    lt_f = _read_lifetable(cfg=cfg, file_path=cfg.lifetable_female_file, sex="F")
+    lt_m = _read_lifetable(cfg=cfg, file_path=cfg.life_table_dict["lifetable_male_file"], sex="M")
+    lt_f = _read_lifetable(cfg=cfg, file_path=cfg.life_table_dict["lifetable_female_file"], sex="F")
     lt = pd.concat([lt_m, lt_f], ignore_index=True)
 
     lt.loc[lt["Variant"].astype(str).str.contains("medium", case=False, na=False), "Variant"] = (
@@ -245,7 +294,7 @@ def _expand_death_rates(*, cfg: WPPConfig, lt_out: pd.DataFrame) -> pd.DataFrame
     for period in pd.unique(mort_sched["Period"]):
         fallbackyear = int(str(period).split("-", maxsplit=1)[0])
         for sex in ["M", "F"]:
-            for age_years in range(cfg.max_age):
+            for age_years in range(cfg.extras_dict["max_age"]):
                 age_lookup = 99 if age_years > 99 else age_years
                 mask = (
                     (mort_sched["Period"] == period)
@@ -275,13 +324,15 @@ def _read_annual_population(
     *, cfg: WPPConfig, file_path: Path, sex: str, sheets: list[str]
 ) -> pd.DataFrame:
     dat = pd.concat(
-        [pd.read_excel(file_path, sheet_name=s, header=cfg.header_row) for s in sheets],
+        [
+            pd.read_excel(file_path, sheet_name=s, header=cfg.extras_dict["header_row"])
+            for s in sheets
+        ],
         sort=False,
         ignore_index=True,
     )
-    # WPP annual files typically have location in column index 2
     loc_col = dat.columns[2]
-    out = _filter_country_by_col(dat, loc_col, cfg.country_label)
+    out = _filter_country_by_col(dat, loc_col, cfg.extras_dict["country_label"])
     out["Sex"] = sex
     return out
 
@@ -343,7 +394,8 @@ def _build_init_population_by_district(
 
     if init_pop[["District_Num", "Region"]].isna().any().any():
         raise AssertionError(
-            "District_Num/Region missing after merge — district name mismatch between census and district table."
+            "District_Num/Region missing after merge — district "
+            "name mismatch between census and district table."
         )
 
     init_pop = init_pop[["District", "District_Num", "Region", "Sex", "Age", "Count"]].copy()
@@ -368,9 +420,182 @@ def _build_init_population_by_district(
 
 
 # ---------------------------------------------------------------------
+# New helpers to reduce WPPBuilder.build() locals/statements
+# ---------------------------------------------------------------------
+@dataclass(frozen=True)
+class _WPPRawInputs:
+    """
+    Typed view of raw inputs returned by `WPPBuilder.load_data`.
+
+    This reduces local variables in `build()` and makes the build contract explicit.
+    """
+
+    cfg: WPPConfig
+    pop_agegrp: pd.DataFrame
+    tot_births: pd.DataFrame
+    sex_ratio: pd.DataFrame
+    asfr: pd.DataFrame
+    deaths: pd.DataFrame
+    annual_raw: pd.DataFrame | None
+
+
+def _as_wpp_inputs(raw: Mapping[str, Any]) -> _WPPRawInputs:
+    """
+    Convert the untyped raw mapping into a typed container.
+
+    Raises:
+        KeyError: if any expected key is missing.
+    """
+    return _WPPRawInputs(
+        cfg=raw["cfg"],
+        pop_agegrp=raw["pop_agegrp"],
+        tot_births=raw["tot_births"],
+        sex_ratio=raw["sex_ratio"],
+        asfr=raw["asfr"],
+        deaths=raw["deaths"],
+        annual_raw=raw["annual_raw"],
+    )
+
+
+def _build_pop_wpp(*, cfg: WPPConfig, pop_agegrp: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build ResourceFile_Pop_WPP.csv from 5-year age-group population inputs.
+    """
+    ests = pop_agegrp.copy()
+    ests[ests.columns[2:23]] = (
+        ests[ests.columns[2:23]] * cfg.pop_agegrp_dict["pop_agegrp_multiplier"]
+    )
+    ests["Variant"] = "WPP_" + ests["Variant"].astype(str)
+    ests = ests.rename(columns={ests.columns[1]: "Year"})
+    return ests.melt(id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age_Grp")
+
+
+def _build_births_tables(
+    *, tot_births: pd.DataFrame, sex_ratio: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Build births outputs:
+      - ResourceFile_TotalBirths_WPP.csv (Total_Births + sex ratio merged, WPP period formatting)
+      - ResourceFile_Pop_Frac_Births_Male.csv (annual male birth fraction 1950..2100)
+    """
+    tb = (
+        tot_births.melt(id_vars=["Variant"], var_name="Period", value_name="Total_Births")
+        .dropna()
+        .copy()
+    )
+    tb["Total_Births"] = 1000 * tb["Total_Births"]
+
+    sr = (
+        sex_ratio.melt(id_vars=["Variant"], var_name="Period", value_name="M_to_F_Sex_Ratio")
+        .dropna()
+        .copy()
+    )
+
+    med = sr.loc[
+        sr["Variant"].astype(str).str.contains("medium", case=False, na=False),
+        ["Period", "M_to_F_Sex_Ratio"],
+    ].copy()
+    if not med.empty:
+        sr = pd.concat(
+            [sr, med.assign(Variant="High variant"), med.assign(Variant="Low variant")],
+            ignore_index=True,
+        )
+
+    births = tb.merge(sr, on=["Variant", "Period"], validate="1:1")
+    reformat_date_period_for_wpp(births, period_col="Period")
+
+    frac_birth_male = expand_frac_births_male_per_year(births, year_lo=1950, year_hi=2100)
+    return births, frac_birth_male
+
+
+def _build_asfr(*, asfr: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build ResourceFile_ASFR_WPP.csv from ASFR input table.
+    """
+    asfr2 = asfr.copy()
+    asfr2[asfr2.columns[2:9]] = asfr2[asfr2.columns[2:9]] / 1000.0
+    reformat_date_period_for_wpp(asfr2, period_col="Period")
+    asfr2["Variant"] = "WPP_" + asfr2["Variant"].astype(str)
+    return asfr2.melt(id_vars=["Variant", "Period"], value_name="asfr", var_name="Age_Grp")
+
+
+def _build_deaths(*, cfg: WPPConfig, deaths: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build ResourceFile_TotalDeaths_WPP.csv from deaths input table.
+    """
+    d = deaths.copy()
+    d[d.columns[2:22]] = d[d.columns[2:22]] * cfg.deaths_dict["deaths_multiplier"]
+    reformat_date_period_for_wpp(d, period_col="Period")
+
+    deaths_melt = d.melt(
+        id_vars=["Variant", "Period", "Sex"], value_name="Count", var_name="Age_Grp"
+    )
+    deaths_melt["Variant"] = "WPP_" + deaths_melt["Variant"].astype(str)
+    return deaths_melt
+
+
+def _build_pop_annual_wpp(*, cfg: WPPConfig, annual_raw: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build ResourceFile_Pop_Annual_WPP.csv from annual population inputs.
+    """
+    calendar_period_lookup = make_calendar_period_lookup()
+    age_grp_lookup = create_age_range_lookup(min_age=0, max_age=100, range_size=5)
+
+    ests_a = annual_raw.copy()
+    ests_a = ests_a.drop(ests_a.columns[[0, 2, 3, 4, 5, 6]], axis=1)
+
+    end = cfg.annual_pop_dict["pop_annual_age_cols_slice_end"]
+    ests_a[ests_a.columns[2:end]] = (
+        ests_a[ests_a.columns[2:end]] * cfg.annual_pop_dict["pop_annual_multiplier"]
+    )
+
+    ests_a = ests_a.rename(columns={ests_a.columns[1]: "Year"})
+    ests_a = ests_a.drop_duplicates(subset=["Year", "Sex"], keep="first")
+    ests_a["Variant"] = "WPP_" + ests_a["Variant"].astype(str)
+
+    ests_melt = ests_a.melt(id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age")
+    ests_melt["Period"] = ests_melt["Year"].map(calendar_period_lookup)
+
+    ests_melt["Age"] = pd.to_numeric(ests_melt["Age"], errors="coerce")
+    ests_melt = ests_melt.loc[ests_melt["Age"].notna()].copy()
+    ests_melt["Age"] = ests_melt["Age"].astype(int)
+    ests_melt["Age_Grp"] = ests_melt["Age"].map(age_grp_lookup)
+
+    return ests_melt
+
+
+def _build_init_population_output(
+    *, ctx: BuildContext, cfg: WPPConfig, pop_annual_long: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Build ResourceFile_Population_<init_population_year>.csv by distributing national WPP
+    age/sex totals across districts using census district shares.
+    """
+    census_df, district_breakdown = _load_census_district_tables(
+        output_dir=ctx.output_dir, census_year=cfg.extras_dict["census_year"]
+    )
+    district_nums = _district_nums_from_census(census_df)
+
+    return _build_init_population_by_district(
+        pop_annual=pop_annual_long,
+        district_breakdown=district_breakdown,
+        district_nums=district_nums,
+        init_year=cfg.extras_dict["init_population_year"],
+    )
+
+
+# ---------------------------------------------------------------------
 # Builder
 # ---------------------------------------------------------------------
 class WPPBuilder(ResourceBuilder):
+    """
+    Builds demographic data files based on World Population Prospects (WPP) inputs.
+
+    Refactored to keep builder state minimal (single stored config) and to split the
+    build process into section helpers, improving readability and satisfying pylint
+    constraints on locals/statements.
+    """
+
     COMPONENT = "demography"
 
     EXPECTED_OUTPUTS = (
@@ -383,20 +608,30 @@ class WPPBuilder(ResourceBuilder):
         "ResourceFile_Pop_DeathRates_Expanded_WPP.csv",
     )
 
+    def __init__(self, ctx: BuildContext, *, dry_run: bool = False) -> None:
+        """
+        Initialise the builder and cache WPP configuration.
+
+        Storing only `self.cfg` avoids too-many-instance-attributes (R0902) and keeps
+        this builder consistent with other components (e.g., CensusBuilder).
+        """
+        super().__init__(ctx, dry_run=dry_run)
+        self.cfg = WPPConfig.from_ctx(self.ctx)
+
     def preflight(self) -> None:
         super().preflight()
-        cfg = WPPConfig.from_ctx(self.ctx)
+        cfg = self.cfg
 
         required_paths = [
-            ("pop_agegrp_male", cfg.pop_agegrp_male),
-            ("pop_agegrp_female", cfg.pop_agegrp_female),
-            ("total_births_file", cfg.total_births_file),
-            ("sex_ratio_file", cfg.sex_ratio_file),
-            ("asfr_file", cfg.asfr_file),
-            ("deaths_male_file", cfg.deaths_male_file),
-            ("deaths_female_file", cfg.deaths_female_file),
-            ("lifetable_male_file", cfg.lifetable_male_file),
-            ("lifetable_female_file", cfg.lifetable_female_file),
+            ("pop_agegrp_male", cfg.pop_agegrp_dict["pop_agegrp_male"]),
+            ("pop_agegrp_female", cfg.annual_pop_dict["pop_agegrp_female"]),
+            ("total_births_file", cfg.fertility_dict["total_births_file"]),
+            ("sex_ratio_file", cfg.fertility_dict["sex_ratio_file"]),
+            ("asfr_file", cfg.fertility_dict["asfr_file"]),
+            ("deaths_male_file", cfg.deaths_dict["deaths_male_file"]),
+            ("deaths_female_file", cfg.deaths_dict["deaths_female_file"]),
+            ("lifetable_male_file", cfg.life_table_dict["lifetable_male_file"]),
+            ("lifetable_female_file", cfg.life_table_dict["lifetable_female_file"]),
         ]
         missing = [f"{k}: {p}" for k, p in required_paths if not p.exists()]
         if missing:
@@ -404,12 +639,22 @@ class WPPBuilder(ResourceBuilder):
                 "Missing required WPP inputs:\n" + "\n".join(f"- {m}" for m in missing)
             )
 
-        if cfg.enable_annual_pop:
+        if cfg.annual_pop_dict["enable_annual_pop"]:
             ann_missing = []
-            if cfg.pop_annual_male_file is None or not cfg.pop_annual_male_file.exists():
-                ann_missing.append(f"pop_annual_male_file: {cfg.pop_annual_male_file}")
-            if cfg.pop_annual_female_file is None or not cfg.pop_annual_female_file.exists():
-                ann_missing.append(f"pop_annual_female_file: {cfg.pop_annual_female_file}")
+            if (
+                cfg.annual_pop_dict["pop_annual_male_file"] is None
+                or not cfg.annual_pop_dict["pop_annual_male_file"].exists()
+            ):
+                ann_missing.append(
+                    f"pop_annual_male_file: {cfg.annual_pop_dict['pop_annual_male_file']}"
+                )
+            if (
+                cfg.annual_pop_dict["pop_annual_female_file"] is None
+                or not cfg.annual_pop_dict["pop_annual_female_file"].exists()
+            ):
+                ann_missing.append(
+                    f"pop_annual_female_file: {cfg.annual_pop_dict['pop_annual_female_file']}"
+                )
             if ann_missing:
                 raise FileNotFoundError(
                     "Annual population enabled, but inputs missing:\n"
@@ -417,45 +662,66 @@ class WPPBuilder(ResourceBuilder):
                 )
 
     def load_data(self) -> Mapping[str, Any]:
-        cfg = WPPConfig.from_ctx(self.ctx)
+        cfg = self.cfg
         reader = WPPReader(
-            country_label=cfg.country_label,
-            header_row=cfg.header_row,
-            country_col_index=cfg.country_col_index,
+            country_label=cfg.extras_dict["country_label"],
+            header_row=cfg.extras_dict["header_row"],
+            country_col_index=cfg.extras_dict["country_col_index"],
         )
 
         males = reader.read_country_table(
-            str(cfg.pop_agegrp_male), sheets=cfg.pop_agegrp_sheets, extra_cols={"Sex": "M"}
+            str(cfg.pop_agegrp_dict["pop_agegrp_male"]),
+            sheets=cfg.pop_agegrp_dict["pop_agegrp_sheets"],
+            extra_cols={"Sex": "M"},
         )
         females = reader.read_country_table(
-            str(cfg.pop_agegrp_female), sheets=cfg.pop_agegrp_sheets, extra_cols={"Sex": "F"}
+            str(cfg.pop_agegrp_dict["pop_agegrp_female"]),
+            sheets=cfg.pop_agegrp_dict["pop_agegrp_sheets"],
+            extra_cols={"Sex": "F"},
         )
         pop_agegrp = pd.concat([males, females], ignore_index=True)
 
         tot_births = reader.read_country_table(
-            str(cfg.total_births_file), sheets=cfg.fert_sheets_all
+            str(cfg.fertility_dict["total_births_file"]),
+            sheets=cfg.fertility_dict["fert_sheets_all"],
         )
         sex_ratio = reader.read_country_table(
-            str(cfg.sex_ratio_file), sheets=cfg.fert_sheets_est_med
+            str(cfg.fertility_dict["sex_ratio_file"]),
+            sheets=cfg.fertility_dict["fert_sheets_est_med"],
         )
-        asfr = reader.read_country_table(str(cfg.asfr_file), sheets=cfg.fert_sheets_all)
+        asfr = reader.read_country_table(
+            str(cfg.fertility_dict["asfr_file"]), sheets=cfg.fertility_dict["fert_sheets_all"]
+        )
 
         deaths_m = reader.read_country_table(
-            str(cfg.deaths_male_file), sheets=cfg.deaths_sheets, extra_cols={"Sex": "M"}
+            str(cfg.deaths_dict["deaths_male_file"]),
+            sheets=cfg.deaths_dict["deaths_sheets"],
+            extra_cols={"Sex": "M"},
         )
         deaths_f = reader.read_country_table(
-            str(cfg.deaths_female_file), sheets=cfg.deaths_sheets, extra_cols={"Sex": "F"}
+            str(cfg.deaths_dict["deaths_female_file"]),
+            sheets=cfg.deaths_dict["deaths_sheets"],
+            extra_cols={"Sex": "F"},
         )
         deaths = pd.concat([deaths_m, deaths_f], ignore_index=True)
 
         annual_raw = None
-        if cfg.enable_annual_pop:
-            assert cfg.pop_annual_male_file is not None and cfg.pop_annual_female_file is not None
+        if cfg.annual_pop_dict["enable_annual_pop"]:
+            assert (
+                cfg.annual_pop_dict["pop_annual_male_file"] is not None
+                and cfg.annual_pop_dict["pop_annual_female_file"] is not None
+            )
             males_a = _read_annual_population(
-                cfg=cfg, file_path=cfg.pop_annual_male_file, sex="M", sheets=cfg.pop_annual_sheets
+                cfg=cfg,
+                file_path=cfg.annual_pop_dict["pop_annual_male_file"],
+                sex="M",
+                sheets=cfg.annual_pop_dict["pop_annual_sheets"],
             )
             females_a = _read_annual_population(
-                cfg=cfg, file_path=cfg.pop_annual_female_file, sex="F", sheets=cfg.pop_annual_sheets
+                cfg=cfg,
+                file_path=cfg.annual_pop_dict["pop_annual_female_file"],
+                sex="F",
+                sheets=cfg.annual_pop_dict["pop_annual_sheets"],
             )
             annual_raw = pd.concat([males_a, females_a], ignore_index=True)
 
@@ -470,133 +736,38 @@ class WPPBuilder(ResourceBuilder):
         }
 
     def build(self, raw: Mapping[str, Any]) -> Mapping[str, pd.DataFrame]:
-        cfg: WPPConfig = raw["cfg"]
-        pop_agegrp: pd.DataFrame = raw["pop_agegrp"]
-        tot_births: pd.DataFrame = raw["tot_births"]
-        sex_ratio: pd.DataFrame = raw["sex_ratio"]
-        asfr: pd.DataFrame = raw["asfr"]
-        deaths: pd.DataFrame = raw["deaths"]
-        annual_raw: pd.DataFrame | None = raw["annual_raw"]
+        inp = _as_wpp_inputs(raw)
+        cfg = inp.cfg
 
-        outputs: dict[str, pd.DataFrame] = {}
+        outputs: dict[str, pd.DataFrame] = {
+            "ResourceFile_Pop_WPP.csv": _build_pop_wpp(cfg=cfg, pop_agegrp=inp.pop_agegrp)
+        }
 
-        # -------------------------
-        # Pop age-group (5-year)
-        # -------------------------
-        ests = pop_agegrp.copy()
-        ests[ests.columns[2:23]] = ests[ests.columns[2:23]] * cfg.pop_agegrp_multiplier
-        ests["Variant"] = "WPP_" + ests["Variant"].astype(str)
-        ests = ests.rename(columns={ests.columns[1]: "Year"})
-
-        pop_wpp = ests.melt(
-            id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age_Grp"
+        births, frac_birth_male = _build_births_tables(
+            tot_births=inp.tot_births, sex_ratio=inp.sex_ratio
         )
-        outputs["ResourceFile_Pop_WPP.csv"] = pop_wpp
-
-        # -------------------------
-        # Births + ASFR
-        # -------------------------
-        tb = tot_births.melt(
-            id_vars=["Variant"], var_name="Period", value_name="Total_Births"
-        ).dropna()
-        tb["Total_Births"] = 1000 * tb["Total_Births"]
-
-        sr = sex_ratio.melt(
-            id_vars=["Variant"], var_name="Period", value_name="M_to_F_Sex_Ratio"
-        ).dropna()
-
-        med = sr.loc[
-            sr["Variant"].astype(str).str.contains("medium", case=False, na=False),
-            ["Period", "M_to_F_Sex_Ratio"],
-        ].copy()
-        if not med.empty:
-            sr = pd.concat(
-                [sr, med.assign(Variant="High variant"), med.assign(Variant="Low variant")],
-                ignore_index=True,
-            )
-
-        births = tb.merge(sr, on=["Variant", "Period"], validate="1:1")
-        reformat_date_period_for_wpp(births, period_col="Period")
         outputs["ResourceFile_TotalBirths_WPP.csv"] = births
-
-        frac_birth_male = expand_frac_births_male_per_year(births, year_lo=1950, year_hi=2100)
         outputs["ResourceFile_Pop_Frac_Births_Male.csv"] = frac_birth_male
 
-        asfr2 = asfr.copy()
-        asfr2[asfr2.columns[2:9]] = asfr2[asfr2.columns[2:9]] / 1000.0
-        reformat_date_period_for_wpp(asfr2, period_col="Period")
-        asfr2["Variant"] = "WPP_" + asfr2["Variant"].astype(str)
-        asfr_melt = asfr2.melt(id_vars=["Variant", "Period"], value_name="asfr", var_name="Age_Grp")
-        outputs["ResourceFile_ASFR_WPP.csv"] = asfr_melt
+        outputs["ResourceFile_ASFR_WPP.csv"] = _build_asfr(asfr=inp.asfr)
+        outputs["ResourceFile_TotalDeaths_WPP.csv"] = _build_deaths(cfg=cfg, deaths=inp.deaths)
 
-        # -------------------------
-        # Deaths (5-year)
-        # -------------------------
-        d = deaths.copy()
-        d[d.columns[2:22]] = d[d.columns[2:22]] * cfg.deaths_multiplier
-        reformat_date_period_for_wpp(d, period_col="Period")
-
-        deaths_melt = d.melt(
-            id_vars=["Variant", "Period", "Sex"], value_name="Count", var_name="Age_Grp"
-        )
-        deaths_melt["Variant"] = "WPP_" + deaths_melt["Variant"].astype(str)
-        outputs["ResourceFile_TotalDeaths_WPP.csv"] = deaths_melt
-
-        # -------------------------
-        # Life table -> death rates + expanded
-        # -------------------------
         lt_out = _lifetable_to_death_rates(cfg=cfg)
         outputs["ResourceFile_Pop_DeathRates_WPP.csv"] = lt_out
+        outputs["ResourceFile_Pop_DeathRates_Expanded_WPP.csv"] = _expand_death_rates(
+            cfg=cfg, lt_out=lt_out
+        )
 
-        expanded = _expand_death_rates(cfg=cfg, lt_out=lt_out)
-        outputs["ResourceFile_Pop_DeathRates_Expanded_WPP.csv"] = expanded
+        if cfg.annual_pop_dict["enable_annual_pop"] and inp.annual_raw is not None:
+            pop_annual = _build_pop_annual_wpp(cfg=cfg, annual_raw=inp.annual_raw)
+            outputs["ResourceFile_Pop_Annual_WPP.csv"] = pop_annual
 
-        # -------------------------
-        # Annual population + init pop (optional)
-        # -------------------------
-        if cfg.enable_annual_pop and annual_raw is not None:
-            calendar_period_lookup = make_calendar_period_lookup()
-            age_grp_lookup = create_age_range_lookup(min_age=0, max_age=100, range_size=5)
-
-            ests_a = annual_raw.copy()
-            ests_a = ests_a.drop(ests_a.columns[[0, 2, 3, 4, 5, 6]], axis=1)
-
-            end = cfg.pop_annual_age_cols_slice_end
-            ests_a[ests_a.columns[2:end]] = (
-                ests_a[ests_a.columns[2:end]] * cfg.pop_annual_multiplier
+            init_pop = _build_init_population_output(
+                ctx=self.ctx, cfg=cfg, pop_annual_long=pop_annual
             )
-
-            ests_a = ests_a.rename(columns={ests_a.columns[1]: "Year"})
-            ests_a = ests_a.drop_duplicates(subset=["Year", "Sex"], keep="first")
-            ests_a["Variant"] = "WPP_" + ests_a["Variant"].astype(str)
-
-            ests_melt = ests_a.melt(
-                id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age"
+            outputs[f"ResourceFile_Population_{cfg.extras_dict['init_population_year']}.csv"] = (
+                init_pop
             )
-            ests_melt["Period"] = ests_melt["Year"].map(calendar_period_lookup)
-
-            ests_melt["Age"] = pd.to_numeric(ests_melt["Age"], errors="coerce")
-            ests_melt = ests_melt.loc[ests_melt["Age"].notna()].copy()
-            ests_melt["Age"] = ests_melt["Age"].astype(int)
-            ests_melt["Age_Grp"] = ests_melt["Age"].map(age_grp_lookup)
-
-            outputs["ResourceFile_Pop_Annual_WPP.csv"] = ests_melt
-
-            census_df, district_breakdown = _load_census_district_tables(
-                output_dir=self.ctx.output_dir,
-                census_year=cfg.census_year,
-            )
-            district_nums = _district_nums_from_census(census_df)
-
-            init_pop = _build_init_population_by_district(
-                pop_annual=ests_melt.rename(
-                    columns={"Age": "Age"}
-                ),  # Age column is already named "Age"
-                district_breakdown=district_breakdown,
-                district_nums=district_nums,
-                init_year=cfg.init_population_year,
-            )
-            outputs[f"ResourceFile_Population_{cfg.init_population_year}.csv"] = init_pop
 
         return outputs
 

@@ -1,6 +1,6 @@
-country_code: tz
-country_name: Tanzania
-wpp_name: United Republic of Tanzania
+country_code: country_code
+country_name: country_name
+wpp_name: country_wpp_name
 
 paths:
   input_dir: inputs/demography
@@ -12,7 +12,7 @@ paths:
 # -------------------------------------------------------
 census:
   year: 2012
-  population_tables: census/tanzania_census.xlsx
+  population_tables: census/country_census_template.xlsx
   pop_totals: pop_totals
   age_dist: age_distribution
   regions: regions

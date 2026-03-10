@@ -33,10 +33,8 @@ from pipeline.components.common.fixes import WPPReader, reformat_date_period_for
 from pipeline.components.resource_builder import BuildContext, ResourceBuilder
 from pipeline.components.utils import (
     create_age_range_lookup,
-    make_calendar_period_lookup,
-    resolve_input_path,
+    make_calendar_period_lookup
 )
-
 
 # ---------------------------------------------------------------------
 # Config
@@ -51,53 +49,22 @@ class WPPConfig:
     the pipeline BuildContext.
     """
 
-    # Reader controls
-    # country_label: str
-    # header_row: int = 16
-    # country_col_index: int = 2
-    # # Model/census tie-in
-    # census_year: int = 2018
-    # max_age: int = 120
-
     extras_dict: dict
 
     # Age-group population (5-year)
     pop_agegrp_dict: dict
-    # pop_agegrp_female: Path = Path()
-    # pop_agegrp_sheets: list[str] = None  # type: ignore[assignment]
-    # pop_agegrp_multiplier: float = 1000.0
 
     # Fertility
     fertility_dict: dict
-    # total_births_file: Path = Path()
-    # sex_ratio_file: Path = Path()
-    # asfr_file: Path = Path()
-    # fert_sheets_all: list[str] = None  # type: ignore[assignment]
-    # fert_sheets_est_med: list[str] = None  # type: ignore[assignment]
 
     # Deaths (5-year)
     deaths_dict: dict
-    # deaths_male_file: Path = Path()
-    # deaths_female_file: Path = Path()
-    # deaths_sheets: list[str] = None  # type: ignore[assignment]
-    # deaths_multiplier: float = 1000.0
 
     # Life table
     life_table_dict: dict
-    # lifetable_male_file: Path = Path()
-    # lifetable_female_file: Path = Path()
-    # lifetable_sheets: list[str] = None  # type: ignore[assignment]
-    # lifetable_usecols: Any | None = None
 
     # Annual pop (optional)
     annual_pop_dict: dict
-    # enable_annual_pop: bool = True
-    # init_population_year: int = 2010
-    # pop_annual_male_file: Path | None = None
-    # pop_annual_female_file: Path | None = None
-    # pop_annual_sheets: list[str] = None  # type: ignore[assignment]
-    # pop_annual_multiplier: float = 1000.0
-    # pop_annual_age_cols_slice_end: int = 103
 
     @staticmethod
     def from_ctx(ctx: BuildContext) -> WPPConfig:
@@ -108,64 +75,58 @@ class WPPConfig:
         """
         wpp = ctx.cfg["wpp"]
 
-        def _p(key: str) -> Path:
-            return resolve_input_path(ctx, wpp[key])
+        # def _p(key: str) -> Path:
+        #     return resolve_input_path(ctx, wpp[key])
 
         extras_dict = {
-            "country_label": str(wpp["country_label"]),
-            "header_row": int(wpp.get("header_row", 16)),
-            "country_col_index": int(wpp.get("country_col_index", 2)),
-            "census_year": int(ctx.cfg.get("census", {}).get("year", 2018)),
-            "max_age": int(ctx.cfg.get("model", {}).get("max_age", 120)),
+            "country_label": wpp["country_label"],
+            "header_row": wpp["header_row"],
+            "country_col_index": wpp["country_col_index"],
+            "census_year": ctx.cfg["census"]["year"],
+            "max_age": ctx.cfg["model"]["max_age"],
         }
 
         # Age-group population (5-year)
         pop_agegrp = {
-            "pop_agegrp_male": _p("pop_agegrp_male"),
-            "pop_agegrp_female": _p("pop_agegrp_female"),
-            "pop_agegrp_sheets": list(wpp["pop_agegrp_sheets"]),
-            "pop_agegrp_multiplier": float(wpp.get("pop_agegrp_multiplier", 1000)),
+            "pop_agegrp_male": wpp["pop_agegrp_male"],
+            "pop_agegrp_female": wpp["pop_agegrp_female"],
+            "pop_agegrp_sheets": wpp["pop_agegrp_sheets"],
+            "pop_agegrp_multiplier": wpp["pop_agegrp_multiplier"],
         }
 
         # Fertility
         fertility_dict = {
-            "total_births_file": _p("total_births_file"),
-            "sex_ratio_file": _p("sex_ratio_file"),
-            "asfr_file": _p("asfr_file"),
-            "fert_sheets_all": list(wpp["fert_sheets_all"]),
-            "fert_sheets_est_med": list(wpp["fert_sheets_est_med"]),
+            "total_births_file": wpp["total_births_file"],
+            "sex_ratio_file": wpp["sex_ratio_file"],
+            "asfr_file": wpp["asfr_file"],
+            "fert_sheets_all": wpp["fert_sheets_all"],
+            "fert_sheets_est_med": wpp["fert_sheets_est_med"],
         }
 
         # Deaths (5-year)
         deaths_dict = {
-            "deaths_male_file": _p("deaths_male_file"),
-            "deaths_female_file": _p("deaths_female_file"),
-            "deaths_sheets": list(wpp["deaths_sheets"]),
-            "deaths_multiplier": float(wpp.get("deaths_multiplier", 1000)),
+            "deaths_male_file": wpp["deaths_male_file"],
+            "deaths_female_file": wpp["deaths_female_file"],
+            "deaths_sheets": wpp["deaths_sheets"],
+            "deaths_multiplier": wpp["deaths_multiplier"],
         }
 
         # Life table
         life_table_dict = {
-            "lifetable_male_file": _p("lifetable_male_file"),
-            "lifetable_female_file": _p("lifetable_female_file"),
-            "lifetable_sheets": list(wpp["lifetable_sheets"]),
-            "lifetable_usecols": wpp.get("lifetable_usecols"),
+            "lifetable_male_file": wpp["lifetable_male_file"],
+            "lifetable_female_file": wpp["lifetable_female_file"],
+            "lifetable_sheets": wpp["lifetable_sheets"],
+            "lifetable_usecols": wpp["lifetable_usecols"],
         }
 
         annual_pop_dict = {
-            "enable_annual_pop": bool(wpp.get("enable_annual_pop", True)),
-            "init_population_year": int(wpp.get("init_population_year", 2010)),
-            "pop_annual_male_file": (
-                _p("pop_annual_male_file") if "pop_annual_male_file" in wpp else None
-            ),
-            "pop_annual_female_file": (
-                _p("pop_annual_female_file") if "pop_annual_female_file" in wpp else None
-            ),
-            "pop_annual_sheets": list(
-                wpp.get("pop_annual_sheets", ["ESTIMATES", "MEDIUM VARIANT"])
-            ),
-            "pop_annual_multiplier": float(wpp.get("pop_annual_multiplier", 1000)),
-            "pop_annual_age_cols_slice_end": int(wpp.get("pop_annual_age_cols_slice_end", 103)),
+            "enable_annual_pop": wpp["enable_annual_pop"],
+            "init_population_year": wpp["init_population_year"],
+            "pop_annual_male_file": wpp["pop_annual_male_file"],
+            "pop_annual_female_file": wpp["pop_annual_female_file"],
+            "pop_annual_sheets": wpp["pop_annual_sheets"],
+            "pop_annual_multiplier": wpp["pop_annual_multiplier"],
+            "pop_annual_age_cols_slice_end": wpp["pop_annual_age_cols_slice_end"],
         }
 
         return WPPConfig(
@@ -209,10 +170,11 @@ def expand_frac_births_male_per_year(
         return 99
 
     df["priority"] = df["Variant"].astype(str).map(_variant_priority)
-
+    print(f"the df is {year_lo, year_hi}")
     records: list[dict[str, object]] = []
     for year in range(year_lo, year_hi):
         hits = df.loc[(year >= df["low_year"]) & (year <= df["high_year"])].copy()
+        print(f"the year is {year, range(year_lo, year_hi)}")
         if hits.empty:
             raise ValueError(f"WPP frac_births_male lookup failed: year not covered: {year}")
         hits = hits.sort_values(["priority", "low_year"], ascending=[True, True])
@@ -580,7 +542,7 @@ def _build_init_population_output(
         pop_annual=pop_annual_long,
         district_breakdown=district_breakdown,
         district_nums=district_nums,
-        init_year=cfg.extras_dict["init_population_year"],
+        init_year=cfg.annual_pop_dict["init_population_year"],
     )
 
 
@@ -624,7 +586,7 @@ class WPPBuilder(ResourceBuilder):
 
         required_paths = [
             ("pop_agegrp_male", cfg.pop_agegrp_dict["pop_agegrp_male"]),
-            ("pop_agegrp_female", cfg.annual_pop_dict["pop_agegrp_female"]),
+            ("pop_agegrp_female", cfg.pop_agegrp_dict["pop_agegrp_female"]),
             ("total_births_file", cfg.fertility_dict["total_births_file"]),
             ("sex_ratio_file", cfg.fertility_dict["sex_ratio_file"]),
             ("asfr_file", cfg.fertility_dict["asfr_file"]),
@@ -638,28 +600,6 @@ class WPPBuilder(ResourceBuilder):
             raise FileNotFoundError(
                 "Missing required WPP inputs:\n" + "\n".join(f"- {m}" for m in missing)
             )
-
-        if cfg.annual_pop_dict["enable_annual_pop"]:
-            ann_missing = []
-            if (
-                cfg.annual_pop_dict["pop_annual_male_file"] is None
-                or not cfg.annual_pop_dict["pop_annual_male_file"].exists()
-            ):
-                ann_missing.append(
-                    f"pop_annual_male_file: {cfg.annual_pop_dict['pop_annual_male_file']}"
-                )
-            if (
-                cfg.annual_pop_dict["pop_annual_female_file"] is None
-                or not cfg.annual_pop_dict["pop_annual_female_file"].exists()
-            ):
-                ann_missing.append(
-                    f"pop_annual_female_file: {cfg.annual_pop_dict['pop_annual_female_file']}"
-                )
-            if ann_missing:
-                raise FileNotFoundError(
-                    "Annual population enabled, but inputs missing:\n"
-                    + "\n".join(f"- {m}" for m in ann_missing)
-                )
 
     def load_data(self) -> Mapping[str, Any]:
         cfg = self.cfg
@@ -765,9 +705,9 @@ class WPPBuilder(ResourceBuilder):
             init_pop = _build_init_population_output(
                 ctx=self.ctx, cfg=cfg, pop_annual_long=pop_annual
             )
-            outputs[f"ResourceFile_Population_{cfg.extras_dict['init_population_year']}.csv"] = (
-                init_pop
-            )
+            outputs[
+                f"ResourceFile_Population_{cfg.annual_pop_dict['init_population_year']}.csv"
+            ] = init_pop
 
         return outputs
 

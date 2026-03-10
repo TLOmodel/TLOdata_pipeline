@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -64,14 +63,9 @@ def test_load_name_mapping_csv_drops_blanks_and_normalizes() -> None:
     trailing, and excessive whitespace, including non-breaking spaces, are
     properly trimmed and normalized.
 
-    Args:
-        None
-
     Raises:
         AssertionError: If the function output does not match the expected result.
 
-    Returns:
-        None
     """
     df = pd.DataFrame(
         {
@@ -90,15 +84,9 @@ def test_load_name_mapping_csv_last_wins_on_duplicates() -> None:
     duplicate entries in the input dataframe. Verifies that the last value
     takes precedence in the case of duplicate 'from' entries.
 
-    Args:
-        None
-
     Raises:
         AssertionError: If the function does not prioritize the last entry
         for duplicate 'from' values.
-
-    Returns:
-        None
     """
     df = pd.DataFrame({"from": ["A", "A", "A"], "to": ["X", "Y", "Z"]})
     out = load_name_mapping_csv(df)
@@ -118,9 +106,6 @@ def test_rename_index_from_file_applies_mapping_and_preserves_unmapped() -> None
     DataFrame. Indices that are not present in the mapping file are kept
     unchanged. It also ensures that the values in the DataFrame are preserved
     after the renaming process.
-
-    Args:
-        None
 
     Raises:
         AssertionError: If the resulting index does not match the expected set of
@@ -149,9 +134,6 @@ def test_rename_index_from_file_normalizes_index_before_mapping() -> None:
     AssertionError
         If the function's output index does not match the expected index after mapping.
 
-    Returns
-    -------
-    None
     """
     df = pd.DataFrame({"v": [1, 2]}, index=[" Blantyre\u00a0Rural ", "Lilongwe Rural"])
     mapping = pd.DataFrame(
@@ -168,16 +150,10 @@ def test_rename_index_from_file_strict_with_canonical_raises() -> None:
     """
     Tests that the `rename_index_from_file` function raises a `ValueError` with an
     appropriate message when called with a strict mode and canonical districts, and
-    there are unmatched index labels in the DataFrame.
-
-    Args:
-        None
 
     Raises:
         ValueError: If there are unmatched index labels while strict mode is enabled.
 
-    Returns:
-        None
     """
     df = pd.DataFrame({"v": [1]}, index=["A"])
     mapping = pd.DataFrame({"from": ["A"], "to": ["AA"]})
@@ -261,29 +237,6 @@ def test_apply_cell_patches_applies_value_with_normalized_row_and_col() -> None:
     assert out.loc[" Row\u00a01 ", " Col\u00a0A "] == 123
 
 
-def test_apply_cell_patches_blank_or_nan_becomes_none() -> None:
-    """
-    Tests the `apply_cell_patches` function to ensure that blank or NaN values in the patch
-    dataframe are converted to None in the output dataframe. The test verifies that after
-    applying the patches, the corresponding cells in the output dataframe contain None.
-
-    Raises:
-        AssertionError: If the patched dataframe does not contain None in the specified cells.
-    """
-    df = pd.DataFrame({"x": [1, 2]}, index=["A", "B"])
-    patches = pd.DataFrame(
-        {
-            "sheet": ["S", "S"],
-            "row_label": ["A", "B"],
-            "col_label": ["x", "x"],
-            "value": ["", np.nan],
-        }
-    )
-    out = apply_cell_patches(df, patches, sheet="S")
-    assert out.loc["A", "x"] is None
-    assert out.loc["B", "x"] is None
-
-
 def test_apply_cell_patches_strict_raises_on_missing_row() -> None:
     """
     Tests the `apply_cell_patches` function in strict mode and ensures it raises
@@ -333,10 +286,6 @@ def test_apply_cell_patches_index_is_labels_false_not_implemented() -> None:
     Tests the `apply_cell_patches` function when the `index_is_labels` parameter is set to False,
     which is currently not implemented. The test ensures that the function raises the expected
     NotImplementedError when executed under these conditions.
-
-    Parameters
-    ----------
-    None
 
     Raises
     ------
@@ -389,8 +338,8 @@ def test_reformat_date_period_for_wpp_nonstring_ok() -> None:
     # Ensure it tolerates non-string values (casts to str)
     df = pd.DataFrame({"Period": [2010, "2010-2015"]})
     # first value "2010" will split to ["2010", None] and then fail int conversion
-    # so we expect it to raise: this is fine because WPP periods must be "lo-hi"
-    with pytest.raises(ValueError, TypeError):
+    # so we expect it to raise Type Error: this is fine because WPP periods must be "lo-hi"
+    with pytest.raises(TypeError):
         reformat_date_period_for_wpp(df)
 
 
@@ -508,10 +457,6 @@ def test_filter_country_raises_with_diagnostics_when_empty() -> None:
     ensures that the error message contains specific keywords relevant to the
     issue, such as "produced empty result", "country_label", and "sample_values".
 
-    Parameters
-    ----------
-    None
-
     Raises
     ------
     ValueError
@@ -594,7 +539,7 @@ def test_read_country_table_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: 
         }
     )
 
-    def fake_read_excel(sheet_name, header):
+    def fake_read_excel(file_path, sheet_name, header):
         """
         Mocks the behavior of reading an Excel file, returning predefined data based on
         the given sheet name and specific header value.

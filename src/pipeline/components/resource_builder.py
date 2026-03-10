@@ -94,6 +94,7 @@ class ResourceBuilder:
             A list of ResourceArtifact objects representing the processed and written
             data resources.
         """
+
         self.preflight()
 
         raw = self.load_data()

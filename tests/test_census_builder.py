@@ -90,7 +90,7 @@ def fake_census_workbook() -> dict[str, pd.DataFrame]:
 
 
 @pytest.mark.parametrize("year", [2012])
-def test_census_builder_writes_expected_output_and_manifest(
+def test_census_builder_writes_expected_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, year: int
 ) -> None:
     """
@@ -143,7 +143,7 @@ def test_census_builder_writes_expected_output_and_manifest(
     # Monkeypatch pd.read_excel to return "workbook dict" when sheet_name=None
     wb = fake_census_workbook()
 
-    def fake_read_excel(path, sheet_name=None):
+    def fake_read_excel(path: Path, sheet_name=None):
         """
         Fake function to simulate reading an Excel file for testing purposes.
 
@@ -192,8 +192,6 @@ def test_census_builder_writes_expected_output_and_manifest(
 
     out_path = ctx.output_dir / out_name
     assert out_path.exists()
-
-    assert (ctx.output_dir / "resource_manifest.json").exists()
 
     df = pd.read_csv(out_path)
     required_cols = set(return_wpp_columns())

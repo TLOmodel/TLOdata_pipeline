@@ -22,6 +22,7 @@ def reformat_date_period_for_wpp(df: pd.DataFrame, period_col: str = "Period") -
     Convert WPP Period like "2010-2015" into inclusive year range "2010-2014".
     Modifies df in-place.
     """
+
     t = df[period_col].astype(str).str.split("-", n=1, expand=True)
     lo = t[0].astype(int)
     hi = t[1].astype(int) - 1
@@ -403,6 +404,7 @@ def coerce_patch_value(raw_val: Any) -> Any:
         original value without modification.
     """
     # blank/NaN -> None, else passthrough
+    print(raw_val)
     if pd.isna(raw_val) or str(raw_val).strip() == "":
         return None
     return raw_val

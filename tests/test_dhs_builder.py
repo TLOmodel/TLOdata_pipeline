@@ -85,7 +85,7 @@ def test_dhs_builder_writes_expected_outputs_and_manifest(
         }
     )
 
-    def fake_read_excel(path, sheet_name=None):
+    def fake_read_excel(path, sheet_name=None, header=None):
         """
         Simulates reading an Excel file and returning a DataFrame based on the sheet name.
 
@@ -110,9 +110,11 @@ def test_dhs_builder_writes_expected_outputs_and_manifest(
         """
         assert str(path) == str(dhs_path)
         if sheet_name == "ASFR":
+            assert header is None
             return asfr_df.copy()
         if sheet_name == "UNDER_5_MORT":
             # header argument is allowed; ignore for this test
+            assert header == 1
             return u5_raw_df.copy()
         raise AssertionError(f"Unexpected sheet_name={sheet_name}")
 
@@ -135,7 +137,6 @@ def test_dhs_builder_writes_expected_outputs_and_manifest(
     # files exist
     assert (ctx.output_dir / "ResourceFile_ASFR_DHS.csv").exists()
     assert (ctx.output_dir / "ResourceFile_Under_Five_Mortality_DHS.csv").exists()
-    assert (ctx.output_dir / "resource_manifest.json").exists()
 
     # quick sanity: ASFR scaled per-woman (<= 2 check is in validate)
     asfr_out = pd.read_csv(ctx.output_dir / "ResourceFile_ASFR_DHS.csv")

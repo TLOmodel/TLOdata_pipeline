@@ -9,6 +9,7 @@ methods within the WPP pipeline. Fixtures provide reusable contexts for
 setting up unit test environments.
 
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -19,8 +20,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import pipeline.components.demography.wpp as wpp
 from pipeline.components import utils
+from pipeline.components.demography import wpp
 
 
 # ------------------------------------------------------------------------------
@@ -28,6 +29,23 @@ from pipeline.components import utils
 # ------------------------------------------------------------------------------
 @dataclass
 class DummyCtx:
+    """
+    Represents a dummy context configuration for a specific process or workflow.
+
+    This class provides structured directories and a configuration dictionary required for the
+    execution or organization of a certain task. It simplifies the management of input, raw, and
+    output directories while allowing flexibility through custom configurations.
+
+    Attributes:
+        cfg (dict[str, Any]): A dictionary containing custom configuration values necessary
+            for the workflow or process.
+        input_dir (Path): A pathlib.Path object representing the directory for input files or data.
+        raw_dir (Path): A pathlib.Path object representing the directory for raw data or
+            intermediate files.
+        output_dir (Path): A pathlib.Path object for storing the final output or results of
+            the process.
+    """
+
     cfg: dict[str, Any]
     input_dir: Path
     raw_dir: Path
@@ -103,8 +121,8 @@ def _minimal_cfg(
     }
 
 
-@pytest.fixture()
-def ctx(tmp_path: Path) -> DummyCtx:
+@pytest.fixture(name="ctx")
+def dummy_ctx(tmp_path: Path) -> DummyCtx:
     """
     Fixture to provide a test context for unit tests.
 
@@ -133,8 +151,8 @@ def ctx(tmp_path: Path) -> DummyCtx:
     return DummyCtx(cfg=cfg, input_dir=input_dir, raw_dir=raw_dir, output_dir=output_dir)
 
 
-@pytest.fixture()
-def cfg(ctx: DummyCtx, monkeypatch: pytest.MonkeyPatch) -> wpp.WPPConfig:
+@pytest.fixture(name="cfg")
+def dummy_cfg(ctx: DummyCtx, monkeypatch: pytest.MonkeyPatch) -> wpp.WPPConfig:
     """
     Fixture for configuring the WPPConfig instance for testing purposes.
 
@@ -261,7 +279,7 @@ def test_norm_text_series_casefold_and_nbsp() -> None:
         If the normalized output does not match the expected list of strings.
     """
     s = pd.Series(["  Malawi", "MALAWI\u00a0", "malawi "])
-    out = wpp._norm_text_series(s)
+    out = wpp.norm_text_series(s)
     assert out.tolist() == ["malawi", "malawi", "malawi"]
 
 
@@ -289,7 +307,7 @@ def test_filter_country_by_col_matches_case_and_nbsp() -> None:
     None
     """
     df = pd.DataFrame({"Loc": ["United Republic of Tanzania\u00a0", "Malawi"], "x": [1, 2]})
-    out = wpp._filter_country_by_col(df, "Loc", "United Republic of Tanzania")
+    out = wpp.filter_country_by_col(df, "Loc", "United Republic of Tanzania")
     assert len(out) == 1
     assert out.loc[0, "x"] == 1
 
@@ -308,7 +326,7 @@ def test_filter_country_by_col_raises_with_samples() -> None:
     """
     df = pd.DataFrame({"Loc": ["A", "B"], "x": [1, 2]})
     with pytest.raises(ValueError) as e:
-        _ = wpp._filter_country_by_col(df, "Loc", "Z")
+        _ = wpp.filter_country_by_col(df, "Loc", "Z")
     msg = str(e.value)
     assert "Country filter returned empty" in msg
     assert "sample_values" in msg
@@ -378,7 +396,7 @@ def test_build_pop_wpp_multiplies_and_melts(cfg: wpp.WPPConfig) -> None:
     columns or if the multiplication factor is not correctly applied.
     """
     pop_agegrp = _mock_pop_agegrp_df()
-    out = wpp._build_pop_wpp(cfg=cfg, pop_agegrp=pop_agegrp)
+    out = wpp.build_pop_wpp(cfg=cfg, pop_agegrp=pop_agegrp)
     assert set(out.columns) == {"Variant", "Year", "Sex", "Age_Grp", "Count"}
 
     # pick one melted row and check multiplier (1000)
@@ -389,19 +407,21 @@ def test_build_pop_wpp_multiplies_and_melts(cfg: wpp.WPPConfig) -> None:
 
 def test_build_births_tables_merges_and_clones_medium_to_high_low(monkeypatch) -> None:
     """
-    Tests the functionality of merged and cloned computations for birth tables between different variants.
+    Tests the functionality of merged and cloned computations for birth tables between different
+    variants.
 
     This function verifies the correctness of merging total births and sex ratios across multiple
-    birth variants (e.g., 'Low', 'Medium', 'High') and using a mock method for expanding the fraction
+    birth variants (e.g., 'Low', 'Medium', 'High') and using mock method for expanding the fraction
     of male births over the years. It ensures that all variants and their corresponding total births
     are correctly handled and validates the fractional male births' range of years.
 
     Parameters:
-    monkeypatch (pytest.MonkeyPatch): A pytest monkeypatch object used to override methods during testing.
+    monkeypatch (pytest.MonkeyPatch): A pytest monkeypatch object used to override methods
+    during testing.
 
     Raises:
-    AssertionError: If the assertions on the resulting DataFrames (for variants, total births, or fraction
-    of male births data) fail.
+    AssertionError: If the assertions on the resulting DataFrames (for variants,
+    total births, or fraction of male births data) fail.
 
     """
     # Use 1950-1955 so that AFTER reformat (likely -1 on high) it covers 1954.
@@ -435,6 +455,9 @@ def test_build_births_tables_merges_and_clones_medium_to_high_low(monkeypatch) -
             from `year_lo` to `year_hi`, and "frac_births_male" containing the
             fraction of male births, fixed at 0.51 for all years.
         """
+        assert year_lo == 1950 and year_hi == 2100
+        assert births_df is not None
+
         return pd.DataFrame(
             {
                 "Year": [1950, 1951, 1952, 1953, 1954],
@@ -448,7 +471,7 @@ def test_build_births_tables_merges_and_clones_medium_to_high_low(monkeypatch) -
         fake_expand_frac_births_male_per_year,
     )
 
-    births, frac = wpp._build_births_tables(tot_births=tot_births, sex_ratio=sex_ratio)
+    births, frac = wpp.build_births_tables(tot_births=tot_births, sex_ratio=sex_ratio)
 
     assert {"Variant", "Period", "Total_Births", "M_to_F_Sex_Ratio"} <= set(births.columns)
     assert float(births.loc[births["Variant"] == "Estimates", "Total_Births"].iloc[0]) == 4000.0
@@ -471,15 +494,16 @@ def test_build_asfr_scales_per_1000_and_melts() -> None:
     Test function for verifying `wpp._build_asfr`.
 
     This function tests whether the `_build_asfr` method of the `wpp` module properly scales the
-    age-specific fertility rates (ASFR) per 1000 population and reshapes the data into a long format.
+    age-specific fertility rates per 1000 population and reshapes the data into a long format.
     It ensures that the output columns are as expected, the ASFR values are scaled correctly, and
     the "Variant" column values are prefixed appropriately.
 
     Raises
     ------
     AssertionError
-        If the columns in the output DataFrame are not as expected, if any values in the "asfr" column
-        are not scaled correctly, or if the "Variant" column does not have the required prefix.
+        If the columns in the output DataFrame are not as expected, if any values in the "asfr"
+        column are not scaled correctly, or if the "Variant" column does not have the required
+        prefix.
     """
     asfr = pd.DataFrame(
         {
@@ -494,7 +518,7 @@ def test_build_asfr_scales_per_1000_and_melts() -> None:
             "45-49": [0.0],
         }
     )
-    out = wpp._build_asfr(asfr=asfr)
+    out = wpp.build_asfr(asfr=asfr)
     assert set(out.columns) == {"Variant", "Period", "Age_Grp", "asfr"}
     v = out.loc[out["Age_Grp"] == "15-19", "asfr"].iloc[0]
     assert float(v) == pytest.approx(0.05)
@@ -515,7 +539,7 @@ def test_build_deaths_multiplies_and_melts(cfg: wpp.WPPConfig) -> None:
                         or the scaling does not result in the expected values.
     """
     deaths = _mock_deaths_df()
-    out = wpp._build_deaths(cfg=cfg, deaths=deaths)
+    out = wpp.build_deaths(cfg=cfg, deaths=deaths)
     assert set(out.columns) == {"Variant", "Period", "Sex", "Age_Grp", "Count"}
 
     # ensure scaling happened
@@ -555,7 +579,7 @@ def test_expand_death_rates_creates_row_per_age_sex_period(cfg: wpp.WPPConfig) -
             "death_rate": [0.1, 0.11, 0.2, 0.21],
         }
     )
-    expanded = wpp._expand_death_rates(cfg=cfg, lt_out=lt_out)
+    expanded = wpp.expand_death_rates(cfg=cfg, lt_out=lt_out)
     assert set(expanded.columns) == {"fallbackyear", "sex", "age_years", "death_rate"}
     assert len(expanded) == cfg.extras_dict["max_age"] * 2
     assert expanded["age_years"].min() == 0
@@ -600,7 +624,7 @@ def test_build_init_population_by_district_sums_match() -> None:
         index=pd.Index(["A", "B"], name="District"),
     )
 
-    out = wpp._build_init_population_by_district(
+    out = wpp.build_init_population_by_district(
         pop_annual=pop_annual,
         district_breakdown=district_breakdown,
         district_nums=district_nums,

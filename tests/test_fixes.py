@@ -558,6 +558,9 @@ def test_read_country_table_pipeline(monkeypatch: pytest.MonkeyPatch, tmp_path: 
         KeyError
             If the sheet name does not match "S1" or "S2".
         """
+
+        assert file_path is not None, f"file path cannot be empty {file_path}"
+
         assert header == 16
         if sheet_name == "S1":
             return sheet1

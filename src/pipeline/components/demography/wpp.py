@@ -31,10 +31,8 @@ import pandas as pd
 
 from pipeline.components.common.fixes import WPPReader, reformat_date_period_for_wpp
 from pipeline.components.resource_builder import BuildContext, ResourceBuilder
-from pipeline.components.utils import (
-    create_age_range_lookup,
-    make_calendar_period_lookup
-)
+from pipeline.components.utils import create_age_range_lookup, make_calendar_period_lookup
+
 
 # ---------------------------------------------------------------------
 # Config
@@ -170,7 +168,7 @@ def expand_frac_births_male_per_year(
         return 99
 
     df["priority"] = df["Variant"].astype(str).map(_variant_priority)
-    print(f"the df is {year_lo, year_hi}")
+
     records: list[dict[str, object]] = []
     for year in range(year_lo, year_hi):
         hits = df.loc[(year >= df["low_year"]) & (year <= df["high_year"])].copy()
@@ -184,12 +182,45 @@ def expand_frac_births_male_per_year(
     return pd.DataFrame(records)
 
 
-def _norm_text_series(s: pd.Series) -> pd.Series:
+def norm_text_series(s: pd.Series) -> pd.Series:
+    """
+    Normalize a pandas Series containing text.
+
+    This function converts the data in the given pandas Series into lowercase, removes
+    non-breaking spaces, trims leading and trailing whitespace, and ensures all values
+    are represented as strings.
+
+    Args:
+        s (pd.Series): A pandas Series containing text data to normalize.
+
+    Returns:
+        pd.Series: The normalized pandas Series.
+    """
     return s.astype(str).str.replace("\u00a0", " ", regex=False).str.strip().str.casefold()
 
 
-def _filter_country_by_col(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
-    series = _norm_text_series(df[col])
+def filter_country_by_col(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
+    """
+    Filters a DataFrame for rows matching a specific label in a specific column.
+
+    The function applies normalization to the text in the specified column, compares it
+    to the normalized input label, and returns a new DataFrame containing only the rows
+    that match the label. If no matching rows are found, an exception is raised, and a
+    sample of unique values from the column is provided for debugging.
+
+    Raises:
+        ValueError: If no rows match the specified label after filtering.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame to be filtered.
+        col (str): The column name to check for the label.
+        label (str): The label to match in the specified column.
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing rows where the specified column
+        matches the label.
+    """
+    series = norm_text_series(df[col])
     lab = str(label).replace("\u00a0", " ").strip().casefold()
     out = df.loc[series == lab].copy().reset_index(drop=True)
     if out.empty:
@@ -218,7 +249,7 @@ def _read_lifetable(*, cfg: WPPConfig, file_path: Path, sex: str) -> pd.DataFram
         ignore_index=True,
     )
     loc_col = df.columns[1]
-    df = _filter_country_by_col(df, loc_col, cfg.extras_dict["country_label"])
+    df = filter_country_by_col(df, loc_col, cfg.extras_dict["country_label"])
     df = df.drop(columns=[loc_col])
     df["Sex"] = sex
     return df
@@ -246,7 +277,32 @@ def _lifetable_to_death_rates(*, cfg: WPPConfig) -> pd.DataFrame:
     return lt[["Variant", "Period", "Sex", "Age_Grp", "death_rate"]].copy()
 
 
-def _expand_death_rates(*, cfg: WPPConfig, lt_out: pd.DataFrame) -> pd.DataFrame:
+def expand_death_rates(*, cfg: WPPConfig, lt_out: pd.DataFrame) -> pd.DataFrame:
+    """
+    Expands death rates across all age years by interpolating based on input life table data.
+
+    This function takes life table data as input and generates a new dataframe that
+    provides death rates for each year of age up to a configured maximum age. It ensures
+    alignment between age ranges and death rates using the input configuration and life
+    table schedules. Data is expanded for both sexes and across all periods.
+
+    Parameters:
+    cfg: WPPConfig
+        Configuration object containing additional settings, including the maximum age.
+    lt_out: pd.DataFrame
+        Input life table dataframe containing columns 'Age_Grp', 'Period', 'Sex',
+        and 'death_rate'. Assumes 'Age_Grp' is in the format 'low_age-high_age'.
+
+    Returns:
+    pd.DataFrame
+        DataFrame containing the expanded mortality data with columns:
+        'fallbackyear', 'sex', 'age_years', and 'death_rate'.
+
+    Raises:
+    AssertionError
+        If no or multiple matches are found for a specific combination of period, sex,
+        and year of age in the life table data.
+    """
     mort_sched = lt_out.copy()
     mort_sched[["low_age", "high_age"]] = mort_sched["Age_Grp"].str.split("-", n=1, expand=True)
     mort_sched["low_age"] = mort_sched["low_age"].astype(int)
@@ -294,7 +350,7 @@ def _read_annual_population(
         ignore_index=True,
     )
     loc_col = dat.columns[2]
-    out = _filter_country_by_col(dat, loc_col, cfg.extras_dict["country_label"])
+    out = filter_country_by_col(dat, loc_col, cfg.extras_dict["country_label"])
     out["Sex"] = sex
     return out
 
@@ -326,13 +382,45 @@ def _district_nums_from_census(census_df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _build_init_population_by_district(
+def build_init_population_by_district(
     *,
     pop_annual: pd.DataFrame,
     district_breakdown: pd.Series,
     district_nums: pd.DataFrame,
     init_year: int,
 ) -> pd.DataFrame:
+    """
+    Builds the initial population by district for a specific year.
+
+    This function calculates the initial population for each district based on the World Population
+    Prospects (WPP) data and district-level breakdowns. It validates the data consistency, merges
+    relevant datasets to distribute the population per district, and performs type conversions
+    and sorting for the final output. The population is adjusted based on district-level shares
+    to ensure consistent totals with the provided WPP annual population data.
+    Errors are raised for data inconsistencies or mismatches in expected inputs.
+
+    Args:
+        pop_annual (pd.DataFrame): The annual population data, containing columns "Sex", "Age",
+                "Year", and "Count".
+        district_breakdown (pd.Series): A series containing district-level proportions of the
+              population. The index represents district names, and the values represent proportional
+              shares.
+        district_nums (pd.DataFrame): A dataframe mapping districts to numerical identifiers and
+               regions, with columns "District", "District_Num", and "Region".
+        init_year (int): The specific year for which the initial population should be calculated.
+
+    Returns:
+        pd.DataFrame: The formatted dataframe containing the initial population by district.
+                        Contains columns "District", "District_Num", "Region", "Sex", "Age",
+                        and "Count".
+
+    Raises:
+        ValueError: If the WPP annual population data does not contain any records for the
+                    specified year.
+        AssertionError: If merged data contains missing district numbers or regions, or if the
+                         total population post-calculation does not match the WPP data within a
+                         specified tolerance.
+    """
     pop_init = pop_annual.loc[pop_annual["Year"] == init_year, ["Sex", "Age", "Count"]].copy()
     if pop_init.empty:
         available = sorted(pd.unique(pop_annual["Year"]))
@@ -419,7 +507,7 @@ def _as_wpp_inputs(raw: Mapping[str, Any]) -> _WPPRawInputs:
     )
 
 
-def _build_pop_wpp(*, cfg: WPPConfig, pop_agegrp: pd.DataFrame) -> pd.DataFrame:
+def build_pop_wpp(*, cfg: WPPConfig, pop_agegrp: pd.DataFrame) -> pd.DataFrame:
     """
     Build ResourceFile_Pop_WPP.csv from 5-year age-group population inputs.
     """
@@ -432,7 +520,7 @@ def _build_pop_wpp(*, cfg: WPPConfig, pop_agegrp: pd.DataFrame) -> pd.DataFrame:
     return ests.melt(id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age_Grp")
 
 
-def _build_births_tables(
+def build_births_tables(
     *, tot_births: pd.DataFrame, sex_ratio: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -470,7 +558,7 @@ def _build_births_tables(
     return births, frac_birth_male
 
 
-def _build_asfr(*, asfr: pd.DataFrame) -> pd.DataFrame:
+def build_asfr(*, asfr: pd.DataFrame) -> pd.DataFrame:
     """
     Build ResourceFile_ASFR_WPP.csv from ASFR input table.
     """
@@ -481,7 +569,7 @@ def _build_asfr(*, asfr: pd.DataFrame) -> pd.DataFrame:
     return asfr2.melt(id_vars=["Variant", "Period"], value_name="asfr", var_name="Age_Grp")
 
 
-def _build_deaths(*, cfg: WPPConfig, deaths: pd.DataFrame) -> pd.DataFrame:
+def build_deaths(*, cfg: WPPConfig, deaths: pd.DataFrame) -> pd.DataFrame:
     """
     Build ResourceFile_TotalDeaths_WPP.csv from deaths input table.
     """
@@ -538,7 +626,7 @@ def _build_init_population_output(
     )
     district_nums = _district_nums_from_census(census_df)
 
-    return _build_init_population_by_district(
+    return build_init_population_by_district(
         pop_annual=pop_annual_long,
         district_breakdown=district_breakdown,
         district_nums=district_nums,
@@ -680,21 +768,21 @@ class WPPBuilder(ResourceBuilder):
         cfg = inp.cfg
 
         outputs: dict[str, pd.DataFrame] = {
-            "ResourceFile_Pop_WPP.csv": _build_pop_wpp(cfg=cfg, pop_agegrp=inp.pop_agegrp)
+            "ResourceFile_Pop_WPP.csv": build_pop_wpp(cfg=cfg, pop_agegrp=inp.pop_agegrp)
         }
 
-        births, frac_birth_male = _build_births_tables(
+        births, frac_birth_male = build_births_tables(
             tot_births=inp.tot_births, sex_ratio=inp.sex_ratio
         )
         outputs["ResourceFile_TotalBirths_WPP.csv"] = births
         outputs["ResourceFile_Pop_Frac_Births_Male.csv"] = frac_birth_male
 
-        outputs["ResourceFile_ASFR_WPP.csv"] = _build_asfr(asfr=inp.asfr)
-        outputs["ResourceFile_TotalDeaths_WPP.csv"] = _build_deaths(cfg=cfg, deaths=inp.deaths)
+        outputs["ResourceFile_ASFR_WPP.csv"] = build_asfr(asfr=inp.asfr)
+        outputs["ResourceFile_TotalDeaths_WPP.csv"] = build_deaths(cfg=cfg, deaths=inp.deaths)
 
         lt_out = _lifetable_to_death_rates(cfg=cfg)
         outputs["ResourceFile_Pop_DeathRates_WPP.csv"] = lt_out
-        outputs["ResourceFile_Pop_DeathRates_Expanded_WPP.csv"] = _expand_death_rates(
+        outputs["ResourceFile_Pop_DeathRates_Expanded_WPP.csv"] = expand_death_rates(
             cfg=cfg, lt_out=lt_out
         )
 

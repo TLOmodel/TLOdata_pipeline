@@ -129,21 +129,12 @@ class CensusBuilder(ResourceBuilder):
     def __init__(self, ctx: BuildContext, *, dry_run: bool = False) -> None:
         super().__init__(ctx, dry_run=dry_run)
         self.census = _load_census_config(self.ctx)
-        # census_cfg = self.ctx.cfg["census"]
-        #
-        # self.census_year = int(census_cfg["year"])
 
         # Workbook path (robust against templated/absolute/relative cfg values)
         self.workbook_path = resolve_input_path(self.ctx, self.census.workbook_path)
 
         # population sheets
         self.workbook_sheets: dict = self.census.workbook_sheets
-        # self.age_distr_sheet = str(self.census.age_distr_sheet)
-        # self.regions_sheet = str(self.census.regions_sheet)
-        #
-        # # Optional sheets (cfg-driven, but can be missing in workbook)
-        # self.dist_name_fixes_sheet = str(self.census.dist_name_fixes_sheet)
-        # self.cell_patches_sheet = str(self.census.cell_patches_sheet)
 
         # National label (template-friendly)
         self.national_label = self.census.national_label

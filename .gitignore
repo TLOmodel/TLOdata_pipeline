@@ -1,4 +1,6 @@
 **/__pycache__/
+*.pyc
+*.egg-info/
 .idea/
 .DS_Store
 # Ignore everything under inputs and outputs
@@ -10,3 +12,14 @@ outputs/*
 !outputs/README.md
 !inputs/**/README.md
 !outputs/**/README.md
+
+# Allow the demography folder structure
+!inputs/demography/
+!inputs/demography/census/
+!inputs/demography/dhs/
+!inputs/demography/wpp/
+
+# Allow README files only
+!inputs/demography/census/README.md
+!inputs/demography/dhs/README.md
+!inputs/demography/wpp/README.md

@@ -404,7 +404,6 @@ def coerce_patch_value(raw_val: Any) -> Any:
         original value without modification.
     """
     # blank/NaN -> None, else passthrough
-    print(raw_val)
     if pd.isna(raw_val) or str(raw_val).strip() == "":
         return None
     return raw_val

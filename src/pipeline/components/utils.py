@@ -119,11 +119,12 @@ def resolve_input_path(ctx: BuildContext, value: str | Path) -> Path:
             "YAML paths are not templated with {paths.input_dir}."
         )
 
-    p = Path(s).expanduser()
-    if p.is_absolute():
-        return p
+    path = Path(value).expanduser()
 
-    return (ctx.raw_dir / p).resolve()
+    if path.is_absolute():
+        return path.resolve()
+
+    return (ctx.input_dir / path).resolve()
 
 
 # ---------------------------------------------------------------------

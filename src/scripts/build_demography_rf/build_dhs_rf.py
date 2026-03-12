@@ -20,7 +20,7 @@ def main() -> None:
     ctx = BuildContext(
         cfg=cfg,
         country=cfg["country_code"],
-        raw_dir=Path(cfg["paths"]["input_dir"]),
+        input_dir=Path(cfg["paths"]["input_dir"]),
         resources_dir=Path(cfg["paths"]["resources_dir"]),
         component="demography",
     )

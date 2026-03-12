@@ -63,7 +63,7 @@ def _ctx(tmp_path: Path) -> BuildContext:
     return BuildContext(
         cfg={},
         country="tz",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=res_dir,
         component="demography",
     )
@@ -99,7 +99,7 @@ def test_preflight_creates_output_dir_and_checks_required_inputs(tmp_path: Path)
     assert "Missing required raw inputs" in str(e.value)
 
     # create required input
-    (ctx.raw_dir / "needed.txt").write_text("ok", encoding="utf-8")
+    (ctx.input_dir / "needed.txt").write_text("ok", encoding="utf-8")
 
     # now preflight passes and output dir exists
     b.preflight()
@@ -132,7 +132,7 @@ def test_run_writes_csvs_and_manifest(tmp_path: Path) -> None:
         conditions, including naming, existence, or JSON schema validation.
     """
     ctx = _ctx(tmp_path)
-    (ctx.raw_dir / "needed.txt").write_text("ok", encoding="utf-8")
+    (ctx.input_dir / "needed.txt").write_text("ok", encoding="utf-8")
 
     b = _DummyBuilder(ctx, dry_run=False)
     artifacts = b.run()
@@ -169,7 +169,7 @@ def test_run_dry_run_does_not_write_files(tmp_path: Path) -> None:
     directory during the dry run process.
     """
     ctx = _ctx(tmp_path)
-    (ctx.raw_dir / "needed.txt").write_text("ok", encoding="utf-8")
+    (ctx.input_dir / "needed.txt").write_text("ok", encoding="utf-8")
 
     b = _DummyBuilder(ctx, dry_run=True)
     artifacts = b.run()

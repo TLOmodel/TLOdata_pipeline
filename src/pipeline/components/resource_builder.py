@@ -28,7 +28,7 @@ class BuildContext:
 
     cfg: Mapping[str, Any]
     country: str
-    raw_dir: Path
+    input_dir: Path
     resources_dir: Path
     component: str
 
@@ -114,7 +114,7 @@ class ResourceBuilder:
 
         missing: list[str] = []
         for rel in self.REQUIRED_INPUTS:
-            p = self.ctx.raw_dir / rel
+            p = self.ctx.input_dir / rel
             if not p.exists():
                 missing.append(str(p))
 

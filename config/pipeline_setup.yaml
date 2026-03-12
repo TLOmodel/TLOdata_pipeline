@@ -26,6 +26,7 @@ census:
 wpp:
   country_label: "{wpp_name}"
   header_row: 16
+  country_col_index: 2
 
   enable_annual_pop: True
   init_population_year: 2010

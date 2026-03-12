@@ -177,7 +177,7 @@ def test_census_builder_writes_expected_output(
     ctx = BuildContext(
         cfg=cfg,
         country="ug",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=resources_dir,
         component="demography",
     )

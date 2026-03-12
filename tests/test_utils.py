@@ -198,7 +198,7 @@ def test_resolve_input_path_relative_joins_raw_dir(tmp_path: Path) -> None:
     ctx = BuildContext(
         cfg={},
         country="tz",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=tmp_path / "outputs" / "resources",
         component="demography",
     )
@@ -222,7 +222,7 @@ def test_resolve_input_path_absolute_passthrough(tmp_path: Path) -> None:
     ctx = BuildContext(
         cfg={},
         country="tz",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=tmp_path / "outputs" / "resources",
         component="demography",
     )
@@ -253,7 +253,7 @@ def test_resolve_input_path_unresolved_template_raises(tmp_path: Path) -> None:
     ctx = BuildContext(
         cfg={},
         country="tz",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=tmp_path / "outputs" / "resources",
         component="demography",
     )

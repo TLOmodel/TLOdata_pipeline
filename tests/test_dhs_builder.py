@@ -123,7 +123,7 @@ def test_dhs_builder_writes_expected_outputs_and_manifest(
     ctx = BuildContext(
         cfg=cfg,
         country="tz",
-        raw_dir=raw_dir,
+        input_dir=raw_dir,
         resources_dir=resources_dir,
         component="demography",
     )

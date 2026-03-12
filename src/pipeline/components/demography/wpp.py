@@ -31,7 +31,11 @@ import pandas as pd
 
 from pipeline.components.common.fixes import WPPReader, reformat_date_period_for_wpp
 from pipeline.components.resource_builder import BuildContext, ResourceBuilder
-from pipeline.components.utils import create_age_range_lookup, make_calendar_period_lookup
+from pipeline.components.utils import (
+    create_age_range_lookup,
+    make_calendar_period_lookup,
+    resolve_input_path,
+)
 
 
 # ---------------------------------------------------------------------
@@ -47,22 +51,12 @@ class WPPConfig:
     the pipeline BuildContext.
     """
 
-    extras_dict: dict
-
-    # Age-group population (5-year)
-    pop_agegrp_dict: dict
-
-    # Fertility
-    fertility_dict: dict
-
-    # Deaths (5-year)
-    deaths_dict: dict
-
-    # Life table
-    life_table_dict: dict
-
-    # Annual pop (optional)
-    annual_pop_dict: dict
+    extras_dict: dict[str, Any]
+    pop_agegrp_dict: dict[str, Any]
+    fertility_dict: dict[str, Any]
+    deaths_dict: dict[str, Any]  # Age-group population (5-year)
+    life_table_dict: dict[str, Any]
+    annual_pop_dict: dict[str, Any]
 
     @staticmethod
     def from_ctx(ctx: BuildContext) -> WPPConfig:
@@ -73,8 +67,8 @@ class WPPConfig:
         """
         wpp = ctx.cfg["wpp"]
 
-        # def _p(key: str) -> Path:
-        #     return resolve_input_path(ctx, wpp[key])
+        def _p(key: str) -> Path:
+            return resolve_input_path(ctx, wpp[key])
 
         extras_dict = {
             "country_label": wpp["country_label"],
@@ -86,33 +80,33 @@ class WPPConfig:
 
         # Age-group population (5-year)
         pop_agegrp = {
-            "pop_agegrp_male": wpp["pop_agegrp_male"],
-            "pop_agegrp_female": wpp["pop_agegrp_female"],
+            "pop_agegrp_male": _p("pop_agegrp_male"),
+            "pop_agegrp_female": _p("pop_agegrp_female"),
             "pop_agegrp_sheets": wpp["pop_agegrp_sheets"],
             "pop_agegrp_multiplier": wpp["pop_agegrp_multiplier"],
         }
 
         # Fertility
         fertility_dict = {
-            "total_births_file": wpp["total_births_file"],
-            "sex_ratio_file": wpp["sex_ratio_file"],
-            "asfr_file": wpp["asfr_file"],
+            "total_births_file": _p("total_births_file"),
+            "sex_ratio_file": _p("sex_ratio_file"),
+            "asfr_file": _p("asfr_file"),
             "fert_sheets_all": wpp["fert_sheets_all"],
             "fert_sheets_est_med": wpp["fert_sheets_est_med"],
         }
 
         # Deaths (5-year)
         deaths_dict = {
-            "deaths_male_file": wpp["deaths_male_file"],
-            "deaths_female_file": wpp["deaths_female_file"],
+            "deaths_male_file": _p("deaths_male_file"),
+            "deaths_female_file": _p("deaths_female_file"),
             "deaths_sheets": wpp["deaths_sheets"],
             "deaths_multiplier": wpp["deaths_multiplier"],
         }
 
         # Life table
         life_table_dict = {
-            "lifetable_male_file": wpp["lifetable_male_file"],
-            "lifetable_female_file": wpp["lifetable_female_file"],
+            "lifetable_male_file": _p("lifetable_male_file"),
+            "lifetable_female_file": _p("lifetable_female_file"),
             "lifetable_sheets": wpp["lifetable_sheets"],
             "lifetable_usecols": wpp["lifetable_usecols"],
         }
@@ -120,8 +114,8 @@ class WPPConfig:
         annual_pop_dict = {
             "enable_annual_pop": wpp["enable_annual_pop"],
             "init_population_year": wpp["init_population_year"],
-            "pop_annual_male_file": wpp["pop_annual_male_file"],
-            "pop_annual_female_file": wpp["pop_annual_female_file"],
+            "pop_annual_male_file": _p("pop_annual_male_file"),
+            "pop_annual_female_file": _p("pop_annual_female_file"),
             "pop_annual_sheets": wpp["pop_annual_sheets"],
             "pop_annual_multiplier": wpp["pop_annual_multiplier"],
             "pop_annual_age_cols_slice_end": wpp["pop_annual_age_cols_slice_end"],
@@ -172,7 +166,6 @@ def expand_frac_births_male_per_year(
     records: list[dict[str, object]] = []
     for year in range(year_lo, year_hi):
         hits = df.loc[(year >= df["low_year"]) & (year <= df["high_year"])].copy()
-        print(f"the year is {year, range(year_lo, year_hi)}")
         if hits.empty:
             raise ValueError(f"WPP frac_births_male lookup failed: year not covered: {year}")
         hits = hits.sort_values(["priority", "low_year"], ascending=[True, True])

@@ -254,7 +254,13 @@ class CensusBuilder(ResourceBuilder):
         table = _collapse_special_age_groups(table)
         table = _merge_district_nums(table, district_nums)
         table = _reorder_columns(table)
+        table["Sex"] = pd.Categorical(table["Sex"], categories=["M", "F"], ordered=True)
+        table = table.sort_values(
+            by=["Sex", "District_Num"],
+            kind="stable",
+        ).reset_index(drop=True)
 
+        table["Sex"] = table["Sex"].astype(str)
         out_name = f"ResourceFile_PopulationSize_{self.census.year}Census.csv"
         return {out_name: table}
 

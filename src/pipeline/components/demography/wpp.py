@@ -511,12 +511,13 @@ def build_pop_wpp(*, cfg: WPPConfig, pop_agegrp: pd.DataFrame) -> pd.DataFrame:
     )
     ests["Variant"] = "WPP_" + ests["Variant"].astype(str)
     ests = ests.rename(columns={ests.columns[1]: "Year"})
-    ests_melt =  ests.melt(id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age_Grp")
+    ests_melt = ests.melt(
+        id_vars=["Variant", "Year", "Sex"], value_name="Count", var_name="Age_Grp"
+    )
     ests_melt["Period"] = ests_melt["Year"].map(calendar_period_lookup)
 
     ests_melt = ests_melt[["Variant", "Year", "Sex", "Age_Grp", "Count", "Period"]]
     return ests_melt
-
 
 
 def build_births_tables(

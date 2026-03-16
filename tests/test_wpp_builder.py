@@ -397,7 +397,7 @@ def test_build_pop_wpp_multiplies_and_melts(cfg: wpp.WPPConfig) -> None:
     """
     pop_agegrp = _mock_pop_agegrp_df()
     out = wpp.build_pop_wpp(cfg=cfg, pop_agegrp=pop_agegrp)
-    assert set(out.columns) == {"Variant", "Year", "Sex", "Age_Grp", "Count"}
+    assert set(out.columns) == {"Variant", "Year", "Sex", "Age_Grp", "Count", "Period"}
 
     # pick one melted row and check multiplier (1000)
     row = out[(out["Variant"] == "WPP_Estimates") & (out["Sex"] == "M")]

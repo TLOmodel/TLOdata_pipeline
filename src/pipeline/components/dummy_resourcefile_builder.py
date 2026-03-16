@@ -32,7 +32,7 @@ import pandas as pd
 from pipeline.components.resource_builder import BuildContext, ResourceBuilder
 
 
-class ExampleFormattingBuilder(ResourceBuilder):
+class DummyResourceFileBuilder(ResourceBuilder):
     """
     Minimal example builder implementing the standard framework methods.
 

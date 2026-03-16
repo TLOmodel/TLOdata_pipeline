@@ -2,11 +2,6 @@ country_code: None
 country_name: None
 wpp_name: None
 
-paths:
-  input_dir: inputs/demography
-  resources_dir: outputs/resources
-  reports_dir: outputs/reports
-
 # -------------------------------------------------------
 # Census
 # -------------------------------------------------------
@@ -78,3 +73,11 @@ dhs:
 model:
   init_year: 2010
   max_age: 120
+
+# -------------------------------------------------------
+# Paths
+# -------------------------------------------------------
+paths:
+  input_dir: inputs/demography
+  resources_dir: outputs/resources
+  reports_dir: outputs/reports

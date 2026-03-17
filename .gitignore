@@ -6,6 +6,7 @@
 # Ignore everything under inputs and outputs
 inputs/*
 outputs/*
+pipeline_env/*
 
 # But keep README files (and their directories)
 !inputs/README.md

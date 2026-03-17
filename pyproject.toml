@@ -3,19 +3,18 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tlo-data-pipeline"
+name = "tlo-pipeline"
 version = "0.1.0"
 description = "TLO data pipeline framework"
 readme = "README.md"
-requires-python = ">=3.10"
-license = "MIT"
+requires-python = ">=3.10,<3.12"
+license = { text = "MIT" }
 authors = [
   { name = "Emmanuel Mnjowe" }
 ]
 
-# pipeline dependencies
 dependencies = [
-  "pandas>=2.1",
+  "pandas>=2.0",
   "numpy>=1.24",
   "pyyaml>=6.0",
   "openpyxl>=3.1",
@@ -23,11 +22,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest>=7.4",
-    "pytest-cov>=4.1",
-]
 dev = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
   "ruff>=0.4",
   "black>=24.3",
   "pylint>=3.0",
@@ -41,14 +38,14 @@ docs = [
 ]
 
 [project.scripts]
-tlo-pipeline = "tlo_data_pipeline.cli:main"
+pipeline = "pipeline.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["tlo_data_pipeline*"]
+include = ["pipeline*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -67,7 +64,7 @@ extend-exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
-ignore = ["E501"]  # let black/line-length handle long lines
+ignore = ["E501"]
 
 [tool.black]
 line-length = 100
@@ -79,7 +76,6 @@ extend-exclude = '''
   | outputs
 )
 '''
-
 
 [tool.mypy]
 python_version = "3.10"

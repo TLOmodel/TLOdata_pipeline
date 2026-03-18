@@ -40,8 +40,6 @@ jobs:
 
       - name: Run tests
         run: |
-          python --version
-          python -m pip show pandas
           pytest -vv --show-capture=no --tb=short --junitxml=pytest.xml
 
       - name: Publish test report

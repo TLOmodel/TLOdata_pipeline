@@ -8,13 +8,13 @@ version = "0.1.0"
 description = "TLO data pipeline framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
-license = { text = "MIT" }
+license = {file = "LICENSE.txt"}
 authors = [
-  { name = "Emmanuel Mnjowe" }
+  {name = "Thanzi La Onse Model Development Team"},
 ]
 
 dependencies = [
-  "pandas>=2.0",
+  "pandas~=2.0",
   "numpy>=1.24",
   "pyyaml>=6.0",
   "openpyxl>=3.1",
@@ -41,6 +41,9 @@ docs = [
 
 [project.scripts]
 pipeline = "pipeline.cli:main"
+
+[project.urls]
+repository = "https://github.com/TLOmodel/TLOdata_pipeline"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -80,7 +83,7 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

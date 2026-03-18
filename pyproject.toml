@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "TLO data pipeline framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
-license = { text = "MIT" }
+license = {file = "LICENSE.txt"}
 authors = [
-  { name = "Emmanuel Mnjowe" }
+  {name = "Thanzi La Onse Model Development Team"},
 ]
 
 dependencies = [
@@ -41,6 +41,9 @@ docs = [
 
 [project.scripts]
 pipeline = "pipeline.cli:main"
+
+[project.urls]
+repository = "https://github.com/TLOmodel/TLOdata_pipeline"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

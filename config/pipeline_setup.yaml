@@ -78,6 +78,6 @@ model:
 # Paths
 # -------------------------------------------------------
 paths:
-  input_dir: inputs/demography
+  input_dir: inputs
   resources_dir: outputs/resources
   reports_dir: outputs/reports

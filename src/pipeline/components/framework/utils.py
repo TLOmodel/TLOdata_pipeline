@@ -3,7 +3,7 @@
 Utilities for:
   - loading YAML configs (with {a.b.c} template resolution)
   - resolving input paths consistently in ResourceBuilder-based pipelines
-  - common demography lookups (age ranges, calendar periods)
+  - framework demography lookups (age ranges, calendar periods)
 
 Conventions:
   1) All runners MUST call load_cfg() so templates are resolved uniformly.
@@ -20,7 +20,7 @@ from typing import Any
 
 import yaml
 
-from pipeline.components.resource_builder import BuildContext
+from pipeline.components.framework.builder import BuildContext
 
 _PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_.]+)}")
 

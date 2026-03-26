@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from pipeline.components.resource_builder import BuildContext
-from pipeline.components.utils import (
+from pipeline.components.framework.builder import BuildContext
+from pipeline.components.framework.utils import (
     create_age_range_lookup,
     load_cfg,
     make_calendar_period_lookup,

@@ -20,8 +20,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pipeline.components import utils
 from pipeline.components.demography import wpp
+from pipeline.components.framework import utils
 
 
 # ------------------------------------------------------------------------------

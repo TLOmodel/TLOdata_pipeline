@@ -46,7 +46,7 @@ class WPPReader:
     country_col_index: int = 2
     drop_col_positions: Sequence[int] = (0, 2, 3, 4, 5, 6)
 
-    # common WPP location column names
+    # framework WPP location column names
     _country_col_candidates: Sequence[str] = (
         "Location",
         "Country",
@@ -242,7 +242,7 @@ def load_name_mapping_csv(df: pd.DataFrame) -> dict[str, str]:
     src["to"] = src["to"].map(_norm_name)
 
     src = src[(src["from"] != "") & (src["to"] != "")]
-    # "last wins" on duplicates (common when analysts add overrides later)
+    # "last wins" on duplicates (framework when analysts add overrides later)
     return dict(zip(src["from"], src["to"], strict=False))
 
 

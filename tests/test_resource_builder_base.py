@@ -19,7 +19,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder
+from pipeline.components.framework.builder import BuildContext, ResourceBuilder
 
 
 class _DummyBuilder(ResourceBuilder):

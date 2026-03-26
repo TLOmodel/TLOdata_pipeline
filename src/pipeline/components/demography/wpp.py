@@ -29,9 +29,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from pipeline.components.common.fixes import WPPReader, reformat_date_period_for_wpp
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder
-from pipeline.components.utils import (
+from pipeline.components.framework.builder import BuildContext, ResourceBuilder
+from pipeline.components.framework.fixes import WPPReader, reformat_date_period_for_wpp
+from pipeline.components.framework.utils import (
     create_age_range_lookup,
     make_calendar_period_lookup,
     resolve_input_path,

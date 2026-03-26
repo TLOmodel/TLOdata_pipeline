@@ -29,10 +29,10 @@ from typing import Any
 
 import pandas as pd
 
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder
+from pipeline.components.framework.builder import BuildContext, ResourceBuilder
 
 
-class DummyResourceFileBuilder(ResourceBuilder):
+class ExampleBuilder(ResourceBuilder):
     """
     Minimal example builder implementing the standard framework methods.
 

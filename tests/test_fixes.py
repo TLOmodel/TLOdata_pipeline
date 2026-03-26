@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pipeline.components.common.fixes import (
+from pipeline.components.framework.fixes import (
     WPPReader,
     _norm_name,
     apply_cell_patches,

@@ -6,8 +6,8 @@ wpp_name: None
 # Census
 # -------------------------------------------------------
 census:
-  year: 2012
-  population_tables: census/tanzania_census.xlsx
+  year: None
+  population_tables: census/country_census_template.xlsx
   pop_totals: pop_totals
   age_dist: age_distribution
   regions: regions

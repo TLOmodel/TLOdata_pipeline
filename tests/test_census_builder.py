@@ -16,9 +16,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from pipeline.components.framework.fixes import return_wpp_columns
 from pipeline.components.demography.census import CensusBuilder
 from pipeline.components.framework.builder import BuildContext
+from pipeline.components.framework.fixes import return_wpp_columns
 
 
 def fake_census_workbook() -> dict[str, pd.DataFrame]:

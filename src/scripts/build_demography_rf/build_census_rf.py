@@ -20,7 +20,7 @@ def main() -> None:
     ctx = BuildContext(
         cfg=cfg,
         country=str(cfg.get("country_code", "")),  # kept for compatibility (even if unused)
-        input_dir=Path(cfg["paths"]["input_dir"])/"demography",
+        input_dir=Path(cfg["paths"]["input_dir"]) / "demography",
         resources_dir=Path(cfg["paths"]["resources_dir"]),
         component="demography",
     )

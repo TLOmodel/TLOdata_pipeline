@@ -26,13 +26,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from pipeline.components.common.fixes import (
+from pipeline.components.framework.fixes import (
     apply_cell_patches,
     rename_index_from_file,
     return_wpp_columns,
 )
-from pipeline.components.resource_builder import BuildContext, ResourceBuilder
-from pipeline.components.utils import make_calendar_period_lookup, resolve_input_path
+from pipeline.components.framework.builder import BuildContext, ResourceBuilder
+from pipeline.components.framework.utils import make_calendar_period_lookup, resolve_input_path
 
 
 @dataclass(frozen=True)

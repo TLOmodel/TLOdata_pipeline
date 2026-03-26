@@ -20,8 +20,8 @@ from typing import Any
 
 import pandas as pd
 
-from pipeline.components.resource_builder import BuildContext, ResourceArtifact, ResourceBuilder
-from pipeline.components.utils import resolve_input_path
+from pipeline.components.framework.builder import BuildContext, ResourceArtifact, ResourceBuilder
+from pipeline.components.framework.utils import resolve_input_path
 
 
 # ---------------------------------------------------------------------

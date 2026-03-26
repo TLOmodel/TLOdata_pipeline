@@ -4,8 +4,8 @@ import argparse
 from pathlib import Path
 
 from pipeline.components.demography.wpp import WPPBuilder
-from pipeline.components.resource_builder import BuildContext
-from pipeline.components.utils import load_cfg
+from pipeline.components.framework.builder import BuildContext
+from pipeline.components.framework.utils import load_cfg
 
 
 def main() -> None:
@@ -19,7 +19,7 @@ def main() -> None:
     ctx = BuildContext(
         cfg=cfg,
         country=cfg["country_code"],
-        input_dir=Path(cfg["paths"]["input_dir"]),
+        input_dir=Path(cfg["paths"]["input_dir"])/"demography",
         resources_dir=Path(cfg["paths"]["resources_dir"]),
         component="demography",
     )

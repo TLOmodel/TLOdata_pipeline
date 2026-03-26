@@ -17,7 +17,7 @@ import pandas as pd
 import pytest
 
 from pipeline.components.demography.dhs import DHSBuilder
-from pipeline.components.resource_builder import BuildContext
+from pipeline.components.framework.builder import BuildContext
 
 
 def test_dhs_builder_writes_expected_outputs_and_manifest(
